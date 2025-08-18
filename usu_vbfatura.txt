@@ -167,45 +167,51 @@ select
 							 end
 					 END
 						  END, 0)AS money) AS 'Valor_Desconto',
-		  CAST( CASE 
-					WHEN ((e001tns.usu_codtip <> 2) AND (e001tns.usu_codtip <> 5)) THEN
-						(
-							(CASE e001tns.cprdev
-								WHEN 'S' THEN e140ipv.vlrliq * -1
-								ELSE
-									CASE e001tns.ventip
-										WHEN 'B' THEN e140ipv.vlrliq * -1
-										ELSE e140ipv.vlrliq
-									END
-							END) -
-							(
-								COALESCE(
-									CASE e001tns.cprdev
-										WHEN 'S' THEN ((e140ipv.vlrliq * (usu_tfindsc.usu_perdsc / 100)) * -1)
-										ELSE
-											CASE e001tns.ventip
-												WHEN 'B' THEN ((e140ipv.vlrliq * (usu_tfindsc.usu_perdsc / 100)) * -1)
-												ELSE
-													CASE
-														WHEN usu_tfindsc1.usu_frmdsc = 1 THEN e140ipv.vlrliq * (e140ipv.usu_perdscfin / 100)
-														ELSE e140ipv.vlrliq * (usu_tfindsc.usu_perdsc / 100)
-													END
-											END
-									END, 0
-								)
-							) - COALESCE((COALESCE(e140ipv.usu_dscsell, 0) + e140ipv.vlricm + e140ipv.vlrpif + e140ipv.vlrcff), 0)
-						) +
-						(
-							CASE
-								WHEN (e140ipv.vlricm > 0 AND e140ipv.codemp = 18 AND e140ipv.codfil = 7) THEN
-									(e140ipv.vlrbic * (10.9 / 100))
-								ELSE
-									0
-							END
-						)
-					ELSE
-						0
-				END AS Money ) AS 'Valor_Liquido',
+-- VERIFICA SE É BONIFICAÇÃO
+CAST( CASE 
+		WHEN ((e001tns.usu_codtip <> 2) AND (e001tns.usu_codtip <> 5)) THEN
+
+--VALOR BRUTO
+(  CASE e001tns.cprdev
+      WHEN 'S' THEN e140ipv.vlrliq
+   ELSE 
+	  CASE e001tns.ventip
+         WHEN 'B' THEN e140ipv.vlrliq
+      ELSE e140ipv.vlrliq
+      END 
+  END  ) - ( 
+
+-- IMPOSTOS
+  ( cast( e140ipv.vlricm as decimal(15,2)) -- ICMS
+	+ cast(e140ipv.vlrpif  as decimal(15,2))  --PIS
+	+ Cast(e140ipv.vlrcff as decimal(15,2)) --CONFINS
+	+ 0 --Valor_ISS
+	+( CASE 
+		WHEN ((e140ipv.vlricm > 0) and (e140ipv.codemp = 18) and (e140ipv.codfil = 7 )) THEN (e140ipv.vlrbic * (10.9/100))*-1
+		ELSE 0
+	   END ) --'Valor_ICMSREDUZIDO1' 
+	   ) + (
+-- DESCONTOS
+COALESCE(
+		 CASE e001tns.cprdev
+           WHEN 'S' THEN ((e140ipv.vlrliq*(usu_tfindsc.usu_perdsc/100)))
+           ELSE 
+			CASE e001tns.ventip
+              WHEN 'B' THEN ((e140ipv.vlrliq*(usu_tfindsc.usu_perdsc/100)))
+			  ELSE 
+				CASE 
+					WHEN (usu_tfindsc1.usu_frmdsc = 1 or usu_tfindsc1.usu_frmdsc = 3) THEN  e140ipv.vlrliq*(e140ipv.usu_perdscfin/100)
+					ELSE e140ipv.vlrliq*(usu_tfindsc.usu_perdsc/100)
+				END
+			  END
+            END, 0) 
+		  ) + (
+-- SELL-OUT
+COALESCE( e140ipv.usu_dscsell, 0 )
+	)
+)
+	ELSE 0
+END as money )as 'Valor_Liquido',
 
 		  CAST( CASE e001tns.cprdev
 				   WHEN 'S' THEN 
@@ -233,7 +239,19 @@ select
 						END 
 				  END AS Money) AS 'Valor_Bruto_Total',
 				  
-		  CAST( e140ipv.usu_dscsell AS Money) 'Desc_SellOut',
+		  CAST( COALESCE( e140ipv.usu_dscsell, 0 ) AS Money) 'Desc_SellOut',
+( 
+
+-- IMPOSTOS
+  ( cast( e140ipv.vlricm as decimal(15,2)) -- ICMS
+	+ cast(e140ipv.vlrpif  as decimal(15,2))  --PIS
+	+ Cast(e140ipv.vlrcff as decimal(15,2)) --CONFINS
+	+ 0 --Valor_ISS
+	+( CASE 
+		WHEN ((e140ipv.vlricm > 0) and (e140ipv.codemp = 18) and (e140ipv.codfil = 7 )) THEN (e140ipv.vlrbic * (10.9/100))*-1
+		ELSE 0
+	   END ) --'Valor_ICMSREDUZIDO1' 
+	   )) as 'Impostos',
 		  '' chaveNF,
 		  FORMAT(DATEADD(MINUTE, e140nfv.horger, 0), 'HH:mm') hora_geracao
 
@@ -473,26 +491,75 @@ UNION ALL
 				end else
 				 0 
 		  end AS 'Valor_Desconto',
-		  coalesce(
-		  case
-				when  (( e001tns.usu_codtip = 3) or ( e001tns.usu_codtip = 1))  then
-				case
-					when (( usu_tfindsc.usu_frmdsc = 1 or usu_tfindsc.usu_frmdsc = 3)and ( coalesce( usu_tfincfgdsc.usu_perdsc,0) > 0)) then
-						coalesce(e440ipc.vlrliq - (e440ipc.vlrliq * usu_tfincfgdsc.usu_perdsc/100),0) * -1				
-					when ( usu_tfindsc.usu_frmdsc = 2) and ( coalesce( usu_tfindsc.usu_perdsc,0) > 0) then
-						coalesce(e440ipc.vlrliq - (e440ipc.vlrliq * usu_tfindsc.usu_perdsc/100),0) *-1
-					else e440ipc.vlrliq *-1
-				end	
-				else e440ipc.vlrliq *-1
-		  end,0) + 	(e440ipc.vlricm + e440ipc.vlrpif + e440ipc.vlrcff ) + case 
-		 
-			when ((e440ipc.vlricm > 0) and (e440ipc.codemp = 18) and (e440ipc.codfil = 7 ))then
-				(e440ipc.vlrbic * (10.9/100)) *-1
-			else
-				0 End as  'Valor_Liquido',
+-- VALOR BRUTO
+( ( e440ipc.vlrliq ) - ( 
+-- IMPOSTOS
+	--Valor_Icms1
+	 ( CASE
+		WHEN (( e001tns.usu_codtip = 3) or ( e001tns.usu_codtip = 1))  THEN	cast((e440ipc.vlricm  ) as decimal(15,2))
+		ELSE cast((e440ipc.vlricm  ) as decimal(15,2))
+	   END  ) + (
+	--Valor_Pis1
+	  CASE
+		WHEN  (( e001tns.usu_codtip = 3) or ( e001tns.usu_codtip = 1))  THEN cast(e440ipc.vlrpif  as decimal(15,2))
+		ELSE  cast(e440ipc.vlrpif  as decimal(15,2))
+	  END ) + (
+	-- Valor_Cofins1
+	  CASE 
+		WHEN  (( e001tns.usu_codtip = 3) or ( e001tns.usu_codtip = 1))  THEN	Cast(e440ipc.vlrcff as decimal(15,2))
+		ELSE Cast(e440ipc.vlrcff as decimal(15,2))
+	  END ) + (
+	-- Valor_ISS
+	0 ) + (
+	-- ICMS_Reduzido
+	  CASE 
+		WHEN ((e440ipc.vlricm > 0) and (e440ipc.codemp = 18) and (e440ipc.codfil = 7 )) THEN (e440ipc.vlrbic * (10.9/100))
+		ELSE 0 
+	  END 	
+	
+	) + (
+	-- DESCONTOS
+	  CASE  
+		WHEN (( e001tns.usu_codtip = 3) or ( e001tns.usu_codtip = 1))  THEN
+																		CASE 
+																			WHEN ( usu_tfindsc.usu_frmdsc = 1 or usu_tfindsc.usu_frmdsc = 3) THEN coalesce(e440ipc.vlrliq * e140ipv.usu_perdscfin/100,0)		
+																		ELSE coalesce(e440ipc.vlrliq * e140ipv.usu_perdscfin/100,0)
+																		END 
+		ELSE 0 
+	  END	
+	) + (
+	-- SELL-OUT
+	 0 )
+) )*-1 AS 'Valor_Liquido',
 
 	  e440ipc.vlrliq*-1  as 'Valor_Bruto_Total',
 		 0 'Desc_SellOut',
+( 
+-- IMPOSTOS
+	--Valor_Icms1
+	 ( CASE
+		WHEN (( e001tns.usu_codtip = 3) or ( e001tns.usu_codtip = 1))  THEN	cast((e440ipc.vlricm  ) as decimal(15,2))
+		ELSE cast((e440ipc.vlricm  ) as decimal(15,2))
+	   END  ) + (
+	--Valor_Pis1
+	  CASE
+		WHEN  (( e001tns.usu_codtip = 3) or ( e001tns.usu_codtip = 1))  THEN cast(e440ipc.vlrpif  as decimal(15,2))
+		ELSE  cast(e440ipc.vlrpif  as decimal(15,2))
+	  END ) + (
+	-- Valor_Cofins1
+	  CASE 
+		WHEN  (( e001tns.usu_codtip = 3) or ( e001tns.usu_codtip = 1))  THEN	Cast(e440ipc.vlrcff as decimal(15,2))
+		ELSE Cast(e440ipc.vlrcff as decimal(15,2))
+	  END ) + (
+	-- Valor_ISS
+	0 ) + (
+	-- ICMS_Reduzido
+	  CASE 
+		WHEN ((e440ipc.vlricm > 0) and (e440ipc.codemp = 18) and (e440ipc.codfil = 7 )) THEN (e440ipc.vlrbic * (10.9/100))
+		ELSE 0 
+	  END 	
+	
+	) )as 'Impostos',
 		 e440nfc.chvnel chaveNF,
 FORMAT(DATEADD(MINUTE, e440nfc.horger, 0), 'HH:mm') hora_geracao
      FROM e440ipc
@@ -507,6 +574,13 @@ LEFT JOIN e440nfc
       AND e440nfc.numnfc = e440ipc.numnfc
       AND e440nfc.codsnf = e440ipc.codsnf
       AND e440nfc.codfor = e440ipc.codfor
+-----------------------------------------------------
+	  LEFT JOIN e140ipv
+			 ON e140ipv.codemp = e440ipc.codemp
+			AND e140ipv.codfil = e440ipc.codfil
+			AND e140ipv.numnfv = e440ipc.numnfv
+			AND e140ipv.seqipv = e440ipc.seqipc
+-----------------------------------------------------
 LEFT JOIN e095for 
        ON e095for.codfor = e440nfc.codfor
 LEFT JOIN E085cli
@@ -736,6 +810,8 @@ SELECT
                   ELSE e140isv.vlrliq*(usu_tfindsc.usu_perdsc/100)
              END
           END, 0)) -  COALESCE(( e140isv.vlricm + e140isv.vlrpif + e140isv.vlrcff + e140isv.vlriss), 0) as Money)  AS 'Valor_Liquido',
+
+		 CAST( COALESCE(( e140isv.vlricm + e140isv.vlrpif + e140isv.vlrcff + e140isv.vlriss), 0) as Money) as 'Impostos',
           
 		  CAST(
 	          CASE e001tns.cprdev
