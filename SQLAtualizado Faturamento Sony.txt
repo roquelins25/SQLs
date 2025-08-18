@@ -1,0 +1,1045 @@
+select
+         'NF Venda' AS 'Tipo_NF',
+          e140ipv.codemp 'Codigo_Empresa',
+          case 
+				when e070emp.codemp = 18 and e070fil.codfil = 2 then
+					concat(e070emp.sigemp,' GO')
+				when e070emp.codemp = 18 and e070fil.codfil <> 2 then
+					concat(e070emp.sigemp,' ES')
+				else
+					e070emp.sigemp
+				end 'Empresa',
+          e140ipv.codfil 'Codigo_Filial',
+          e070fil.sigfil 'Filial',
+          CONVERT(DATETIME, '01/'+CAST(MONTH(e140nfv.datemi) AS CHAR(2))+'/'+CAST(YEAR(e140nfv.datemi) AS CHAR(4)), 103) 'Competencia',
+          e140nfv.datemi 'Emissao',
+          e140nfv.datger 'Entrada',
+          e140ipv.codsnf 'Serie',
+          e140ipv.numnfv 'Nota',
+          e140nfv.codcli 'Cod_Cli_For',
+          e085cli.apecli 'Cliente_Fornecedor',
+          e085cli.codram 'Codigo_Ramo',
+          e026ram.desram 'Ramo',
+          e085cli.codgre 'Cod_Grupo',
+          e069gre.nomgre 'Grupo',
+          e085cli.endcli 'Endereco',
+          e085cli.nencli 'Numero',
+          e085cli.baicli 'Bairro',
+          e085cli.sigufs 'Estado',
+          e085cli.cidcli 'Cidade',
+          e085cli.cepcli 'CEP',
+          e006pai.nompai 'Pais',
+          e140ipv.seqipv 'Item',
+          e140ipv.tnspro 'Transacao',
+          e140ipv.numped 'Pedido_OC',
+          e140ipv.codpro 'Cod_Produto',
+          e075pro.despro 'Produto',
+          e140ipv.codfam 'Cod_Familia',
+          e012fam.desfam 'Familia',
+          e140ipv.coddep 'Deposito',
+          e013agp.desagp 'Agrupamento',
+          CASE e001tns.cprdev	
+           WHEN 'S' THEN e140ipv.qtdfat
+            ELSE CASE e001tns.ventip
+                   WHEN 'B' THEN e140ipv.qtdfat
+                    ELSE e140ipv.qtdfat
+                 END
+          END as'Qtd_Estoque',
+          e140ipv.unimed 'UN_Estoque',
+          CASE e001tns.cprdev
+           WHEN 'S' THEN e140ipv.preuni
+            ELSE CASE e001tns.ventip
+                   WHEN 'B' THEN e140ipv.preuni
+                    ELSE e140ipv.preuni
+                 END
+          END AS 'Preco_UN',
+         /* CASE e001tns.cprdev
+           WHEN 'S' THEN e140ipv.qtdven*-1
+            ELSE CASE e001tns.ventip
+                   WHEN 'B' THEN e140ipv.qtdven*-1
+                    ELSE e140ipv.qtdven
+                 END 
+
+          END*/
+		  e140ipv.qtdven AS 'Qtd_Faturada',
+          e140ipv.univen 'UN_Faturada',
+          e084cmd.usu_qtdder 'Qtde_Derivacao',
+          e084cmd.desder 'Derivacao',
+          e059emb.usu_qtdcon 'Qtd_Embalgem',
+          
+          --Daqui pra frente vida nova
+		  
+          CASE            
+           --Se for trasação de devolução ele vai negativar
+           WHEN (e001tns.cprdev='S') THEN
+             (e140ipv.qtdven*COALESCE((e084cmd.usu_qtdder), 1000000)/COALESCE((e059emb.usu_qtdcon), 1))
+           --quando não é devolução
+           /*WHEN ((e001tns.ventip='B') AND (e075der.codder<>''))
+                     THEN (e140ipv.qtdven*COALESCE((e084cmd.usu_qtdder), 1000000)/COALESCE((e059emb.usu_qtdcon), 1))*/
+           WHEN ((e001tns.ventip='B') AND (e075der.codder=''))
+                     THEN e140ipv.qtdven
+		  WHEN ((E140IPV.univen = E075PRO.unime3)) THEN
+           	     (((e140ipv.qtdven) /(e075der.vlrcn3)) *COALESCE( e084cmd.usu_qtdder,  360 )/COALESCE((e059emb.usu_qtdcon), 360))                     
+           
+		   WHEN (E140IPV.univen = E075PRO.unime2 AND e140ipv.codpro = '10080027' ) THEN (e140ipv.qtdven * COALESCE((e084cmd.usu_qtdder),  COALESCE((e075der.vlrcn2),  360))/COALESCE((e059emb.usu_qtdcon), 360))
+		   
+		   WHEN ((E140IPV.univen = E075PRO.unime2)) THEN
+           	     (((e140ipv.qtdven) /(e075der.vlrcn2)) *COALESCE( e084cmd.usu_qtdder,  360 )/COALESCE((e059emb.usu_qtdcon), 360))
+           ELSE (e140ipv.qtdven*COALESCE((e084cmd.usu_qtdder),  COALESCE((e075der.vlrcn2),  360))/COALESCE((e059emb.usu_qtdcon), 360))
+                
+          END AS 'CX_360',  
+
+          COALESCE((e059emb.desemb), 'OUTROS') 'Embalagem',
+          CASE e001tns.cprdev
+           WHEN 'S' THEN e140ipv.preven
+             ELSE CASE e001tns.ventip
+                   WHEN 'B' THEN e140ipv.preven
+                    ELSE e140ipv.preven
+                  END 
+          END AS 'Preco_Faturado',
+          CASE e001tns.cprdev
+           WHEN 'S' THEN e140ipv.vlrliq
+             ELSE CASE e001tns.ventip
+                   WHEN 'B' THEN e140ipv.vlrliq
+                    ELSE e140ipv.vlrliq
+                  END 
+          END AS 'Valor_Bruto',
+		  
+		  COALESCE(
+		  CASE e001tns.cprdev
+           WHEN 'S' THEN ((e140ipv.vlrliq*(usu_tfindsc.usu_perdsc/100)))
+             ELSE CASE e001tns.ventip
+                   WHEN 'B' THEN ((e140ipv.vlrliq*(usu_tfindsc.usu_perdsc/100)))
+			 ELSE case when (usu_tfindsc1.usu_frmdsc = 1 or usu_tfindsc1.usu_frmdsc = 3) Then
+					e140ipv.vlrliq*(e140ipv.usu_perdscfin/100)
+                  ELSE e140ipv.vlrliq*(usu_tfindsc.usu_perdsc/100)
+		     end
+     END
+          END, 0) AS 'Valor_Desconto',
+          --
+CASE
+	WHEN (  ( (select usu_Destip From usu_ttiptns where e001tns.usu_codtip = usu_ttiptns.usu_codtip) = 'FATURAMENTO' ) AND ( e140nfv.datemi BETWEEN '20250601' AND'20250626' ) AND ( 
+																												CAST( CASE 
+																														WHEN ((e001tns.usu_codtip <> 2) AND (e001tns.usu_codtip <> 5)) THEN
+																															(
+																																(CASE e001tns.cprdev
+																																	WHEN 'S' THEN e140ipv.vlrliq * -1
+																																	ELSE
+																																		CASE e001tns.ventip
+																																			WHEN 'B' THEN e140ipv.vlrliq * -1
+																																			ELSE e140ipv.vlrliq
+																																		END
+																																END)  - COALESCE((COALESCE(e140ipv.usu_dscsell, 0) + e140ipv.vlricm + e140ipv.vlrpif + e140ipv.vlrcff), 0)
+																																 - (
+																																	COALESCE(
+																																		CASE e001tns.cprdev
+																																			WHEN 'S' THEN ((e140ipv.vlrliq * (usu_tfindsc.usu_perdsc / 100)) * -1)
+																																			ELSE
+																																				CASE e001tns.ventip
+																																					WHEN 'B' THEN ((e140ipv.vlrliq * (usu_tfindsc.usu_perdsc / 100)) * -1)
+																																					ELSE
+																																						CASE
+																																							WHEN usu_tfindsc.usu_frmdsc = 1 THEN e140ipv.vlrliq * (e140ipv.usu_perdscfin / 100)
+																																							ELSE e140ipv.vlrliq * (usu_tfindsc.usu_perdsc / 100)
+																																						END
+																																				END
+																																		END, 0
+																																	)
+																																)
+																															) +
+																															(
+																																CASE
+																																	WHEN (e140ipv.vlricm > 0 AND e140ipv.codemp = 18 AND e140ipv.codfil = 7) THEN
+																																		(e140ipv.vlrbic * (10.9 / 100))
+																																	ELSE
+																																		0
+																																END
+																															)
+																														ELSE
+																															0
+																													END AS Money ) < 0 ) ) THEN 0 ELSE 
+
+
+	 CAST( CASE 
+			WHEN ((e001tns.usu_codtip <> 2) AND (e001tns.usu_codtip <> 5)) THEN
+				(
+					(CASE e001tns.cprdev
+						WHEN 'S' THEN e140ipv.vlrliq * -1
+						ELSE
+							CASE e001tns.ventip
+								WHEN 'B' THEN e140ipv.vlrliq * -1
+								ELSE e140ipv.vlrliq
+							END
+					END)  - COALESCE((COALESCE(e140ipv.usu_dscsell, 0) + e140ipv.vlricm + e140ipv.vlrpif + e140ipv.vlrcff), 0)
+					 - (
+						COALESCE(
+							CASE e001tns.cprdev
+								WHEN 'S' THEN ((e140ipv.vlrliq * (usu_tfindsc.usu_perdsc / 100)) * -1)
+								ELSE
+									CASE e001tns.ventip
+										WHEN 'B' THEN ((e140ipv.vlrliq * (usu_tfindsc.usu_perdsc / 100)) * -1)
+										ELSE
+											CASE
+												WHEN usu_tfindsc.usu_frmdsc = 1 THEN e140ipv.vlrliq * (e140ipv.usu_perdscfin / 100)
+												ELSE e140ipv.vlrliq * (usu_tfindsc.usu_perdsc / 100)
+											END
+									END
+							END, 0
+						)
+					)
+				) +
+				(
+					CASE
+						WHEN (e140ipv.vlricm > 0 AND e140ipv.codemp = 18 AND e140ipv.codfil = 7) THEN
+							(e140ipv.vlrbic * (10.9 / 100))
+						ELSE
+							0
+					END
+				)
+			ELSE
+				0
+		END AS Money )
+
+		END AS 'Valor_Liquido',
+          --
+                    COALESCE( case  
+						 when (usu_tfindsc1.usu_frmdsc = 1 or usu_tfindsc1.usu_frmdsc = 3) then 
+							 e140ipv.usu_perdscfin else
+					(usu_tfindsc.usu_perdsc)
+					end, 0) 'Perc_Desconto',
+					
+					
+          r996lsf.valkey 'Situacao',
+          e085cli.codfor 'Cod_Refer',
+	   e085cli.datcad 'Data_Cadastro',
+	   e090rep.nomrep 'Representante',
+	   cast( e140ipv.vlricm as decimal(15,2)) Valor_Icms, cast(e140ipv.vlrpif  as decimal(15,2)) Valor_Pis ,Cast(e140ipv.vlrcff as decimal(15,2)) Valor_Cofins, 
+	   case
+		when e076mar.codmar is null then	
+			'OUTRAS RECEITAS'
+			else
+	   e076mar.nommar
+	   end Nome_Marca,
+	(select usu_Destip From usu_ttiptns where e001tns.usu_codtip = usu_ttiptns.usu_codtip) as tipo,
+	e085hcl.usu_km km,
+CONVERT(DECIMAL(10,2),
+			CASE 
+				WHEN e076mar.codmar IN( 'ADUBO','OUTROS') THEN 0
+			ELSE
+				CASE
+					WHEN e059emb.codemb = 34 THEN
+						CASE
+							WHEN E140IPV.univen = E075PRO.unime3 THEN 
+								(((((e140ipv.qtdven) / NULLIF(COALESCE(e075der.vlrcn3,1),0) * COALESCE(e084cmd.usu_qtdder,1)) / NULLIF(COALESCE(e059emb.usu_qtdcon,1),0)) 
+								* NULLIF(COALESCE(e059emb.usu_cx3mul,1),0)) / NULLIF(COALESCE(e059emb.usu_cx3div,1),0))
+							WHEN E140IPV.univen = E075PRO.unime2 THEN 
+								(((((e140ipv.qtdven) / NULLIF(COALESCE(e075der.vlrcn2,1),0) * COALESCE(e084cmd.usu_qtdder,1)) / NULLIF(COALESCE(e059emb.usu_qtdcon,1),0)) 
+								* NULLIF(COALESCE(e059emb.usu_cx3mul,1),0)) / NULLIF(COALESCE(e059emb.usu_cx3div,1),0))
+							ELSE 
+								((((e140ipv.qtdven * COALESCE(e084cmd.usu_qtdder,1)) / NULLIF(COALESCE(e059emb.usu_qtdcon,1),0)) 
+								* NULLIF(COALESCE(e059emb.usu_cx3mul,1),0)) / NULLIF(COALESCE(e059emb.usu_cx3div,1),0))
+						END
+
+					WHEN e059emb.codemb IN (33, 48, 49) THEN
+						CASE
+							WHEN E140IPV.univen = E075PRO.unime3 THEN 
+								(((((e140ipv.qtdven) / NULLIF(COALESCE(e075der.vlrcn3,1),0) * COALESCE(e084cmd.usu_qtdder,1)) / NULLIF(COALESCE(e059emb.usu_qtdcon,1),0)) 
+								* NULLIF(COALESCE(e059emb.usu_cx3mul,1),0)) / NULLIF(COALESCE(e059emb.usu_cx3div,1),0))
+							WHEN E140IPV.univen = E075PRO.unime2 THEN 
+								(((((e140ipv.qtdven) / NULLIF(COALESCE(e075der.vlrcn2,1),0) * COALESCE(e084cmd.usu_qtdder,1)) / NULLIF(COALESCE(e059emb.usu_qtdcon,1),0)) 
+								* NULLIF(COALESCE(e059emb.usu_cx3mul,1),0)) / NULLIF(COALESCE(e059emb.usu_cx3div,1),0))
+							ELSE 
+								((((e140ipv.qtdven * COALESCE(e084cmd.usu_qtdder,1)) / NULLIF(COALESCE(e059emb.usu_qtdcon,1),0)) 
+								* NULLIF(COALESCE(e059emb.usu_cx3mul,1),0)) / NULLIF(COALESCE(e059emb.usu_cx3div,1),0))
+						END
+
+					WHEN e059emb.codemb IN (36, 37, 38) THEN
+						CASE
+							WHEN E140IPV.univen = E075PRO.unime3 THEN 
+								((((((e140ipv.qtdven) / NULLIF(COALESCE(e075der.vlrcn3,1),0) * COALESCE(e084cmd.usu_qtdder,1)) / NULLIF(COALESCE(e059emb.usu_qtdcon,1),0)) 
+								/ NULLIF(COALESCE(e059emb.usu_cx3div,1),0)) * (NULLIF(COALESCE(e059emb.usu_fatccx,1),0) / 100)))
+							WHEN E140IPV.univen = E075PRO.unime2 THEN 
+								((((((e140ipv.qtdven) / NULLIF(COALESCE(e075der.vlrcn2,1),0) * COALESCE(e084cmd.usu_qtdder,1)) / NULLIF(COALESCE(e059emb.usu_qtdcon,1),0)) 
+								/ NULLIF(COALESCE(e059emb.usu_cx3div,1),0)) * (NULLIF(COALESCE(e059emb.usu_fatccx,1),0) / 100)))
+							ELSE 
+								(((e140ipv.qtdven * COALESCE(e084cmd.usu_qtdder,1)) / NULLIF(COALESCE(e059emb.usu_cx3div,1),0)) * (NULLIF(COALESCE(e059emb.usu_fatccx,1),0) / 100))
+						END
+						
+					WHEN e059emb.codemb IN (29, 27, 28, 30, 53) THEN
+						CASE
+							WHEN ((e140ipv.codpro = '10040005') AND (e140ipv.codemp = 100)) THEN ( e140ipv.qtdven * 1 ) / 360
+
+							WHEN E140IPV.univen = E075PRO.unime3 THEN 
+								(((e140ipv.qtdven) / NULLIF(COALESCE(e075der.vlrcn3,1),0) * COALESCE(e084cmd.usu_qtdder,1)) / NULLIF(COALESCE(e059emb.usu_cx3div,1),0))
+							WHEN E140IPV.univen = E075PRO.unime2 THEN 
+								(((e140ipv.qtdven) / NULLIF(COALESCE(e075der.vlrcn2,1),0) * COALESCE(e084cmd.usu_qtdder,1)) / NULLIF(COALESCE(e059emb.usu_cx3div,1),0))
+							ELSE 
+								((e140ipv.qtdven * COALESCE(e084cmd.usu_qtdder,1)) / NULLIF(COALESCE(e059emb.usu_cx3div,1),0))
+						END
+
+					ELSE 
+						CASE
+							WHEN E140IPV.univen = E075PRO.unime3 THEN (((e140ipv.qtdven) / NULLIF(COALESCE(e075der.vlrcn3,1),0) * COALESCE(e084cmd.usu_qtdder,1)) / NULLIF(COALESCE(e059emb.usu_qtdcon,1),0))
+							
+							WHEN (E140IPV.univen = E075PRO.unime2 AND e140ipv.codpro = '10080027' ) THEN (e140ipv.qtdven * COALESCE((e084cmd.usu_qtdder),  COALESCE((e075der.vlrcn2),  360))/COALESCE((e059emb.usu_qtdcon), 360))
+							WHEN E140IPV.univen = E075PRO.unime2 THEN (((e140ipv.qtdven) / NULLIF(COALESCE(e075der.vlrcn2,1),0) * COALESCE(e084cmd.usu_qtdder,1)) / NULLIF(COALESCE(e059emb.usu_qtdcon,1),0))
+							
+							ELSE 
+								((e140ipv.qtdven * COALESCE(e084cmd.usu_qtdder,1)) / NULLIF(COALESCE(e059emb.usu_qtdcon,1),0))
+						END
+				END 
+			END ) 'CX360_IND',
+	 
+		CASE e001tns.cprdev
+           WHEN 'S' THEN 
+				case 
+					when ((e001tns.usu_codtip = 2) or (e001tns.usu_codtip = 5)) then
+						0
+					else
+						e140ipv.vlrliq
+				end
+           ELSE	CASE e001tns.ventip
+					WHEN 'B' THEN 
+				case 
+					when ((e001tns.usu_codtip = 2) or (e001tns.usu_codtip = 5)) then
+						0
+					else
+						e140ipv.vlrliq
+				end
+					ELSE 				
+					case 
+					when ((e001tns.usu_codtip = 2) or (e001tns.usu_codtip = 5)) then
+						0
+					else
+						e140ipv.vlrliq
+				end
+				END 
+          END AS 'Valor_Bruto_Total',
+		  e140nfv.codtra cod_transportadora,
+		  e073tra.nomtra nome_transportadora,
+		  E059age.desage agrupamento_embalagem,
+		 e140ipv.codder 'Cod_Derivacao',
+		 e084cmd.usu_qtdder 'Qtde_Nova',
+		 e140nfv.sitnfv 'Cod_Situacao',
+		 e140ipv.vlrfre 'frete_item',
+		 e090rep.codrep 'Cod_Representante',
+		 e140nfv.datemi 'Dia_Competencia',
+		 e085cli.cgccpf 'CNPJ_Cliente',
+		 e085cli.insest 'IE_Cliente',
+		 e000cor.descor 'COR',
+		 e140ipv.usu_dscsell 'Desc_SellOut',
+		 case 
+		 
+			when ((e140ipv.vlricm > 0) and (e140ipv.codemp = 18) and (e140ipv.codfil = 7 ))then
+				(e140ipv.vlrbic * (10.9/100))*-1
+			else
+				0
+
+		 
+		 end 'Valor_ICMSREDUZIDO',
+		 0 Valor_ISS,
+		 e075der.vlrcn2 VlrCnv2_der,
+		 e070fil.usu_longitude longitudeFilial,
+		 e070fil.usu_latitude  latitudeFilial,
+		 TRY_CAST(e085cli.vlrlon AS FLOAT) AS longitude,
+		 TRY_CAST(e085cli.vlrlat AS FLOAT) AS   latitude,
+
+/*COALESCE (  (SELECT TOP(1)USU_VFreteCont.frete_item FROM USU_VFreteCont
+					WHERE  USU_VFreteCont.codemp = E140IPV.codemp  AND
+						   USU_VFreteCont.CODFIL = E140IPV.codfil AND
+						   USU_VFreteCont.codSNF = E140IPV.codsnf AND
+						   USU_VFreteCont.NUMNFV = E140IPV.numnfv AND
+						   USU_VFreteCont.SEQIPV = E140IPV.SEQIPV AND
+						   USU_VFreteCont.frete_item IS NOT null  ), 0) */ 0 AS Frete_terceiro
+     FROM e140ipv
+LEFT JOIN e070emp 
+       ON e070emp.codemp = e140ipv.codemp
+LEFT JOIN e070fil 
+       ON e070fil.codfil = e140ipv.codfil
+      AND e070fil.codemp = e140ipv.codemp
+LEFT JOIN e140nfv
+       ON e140nfv.codemp = e140ipv.codemp 
+      AND e140nfv.codfil = e140ipv.codfil 
+      AND e140nfv.codsnf = e140ipv.codsnf 
+      AND e140nfv.numnfv = e140ipv.numnfv
+LEFT JOIN r996lsf
+       ON r996lsf.keynam = e140nfv.sitnfv
+      AND r996lsf.lstnam = 'LSitNfs'
+LEFT JOIN e012fam
+       ON e012fam.codemp = e140ipv.codemp
+      AND e012fam.codfam = e140ipv.codfam
+LEFT JOIN e085cli
+       ON e085cli.codcli = e140nfv.codcli
+LEFT join e085hcl on
+	e085hcl.codemp = e140nfv.codemp and
+	e085hcl.codfil = e140nfv.codfil and
+	e085hcl.codcli = e140nfv.codcli
+left join e090hrp on
+	e085hcl.codemp = e090hrp.codemp and
+	e085hcl.codrep = e090hrp.codrep
+left join e090rep on
+	e090rep.codrep = e090hrp.codrep
+left join e073tra on
+	e073tra.codtra = e140nfv.codtra 
+LEFT JOIN e075der 
+		ON e075der.codemp = e140ipv.codemp
+		AND e075der.codpro = e140ipv.codpro
+		AND (
+			(e140ipv.codemp = 100 AND e075der.codder = e140ipv.codder)
+			OR (e140ipv.codemp <> 100 AND e075der.codder = (
+				SELECT TOP 1 codder 
+				FROM e075der 
+				WHERE e075der.codemp = e140ipv.codemp 
+				AND e075der.codpro = e140ipv.codpro 
+				AND e075der.sitder = 'A'
+			))
+		)
+LEFT JOIN e059emb
+       ON e059emb.codemb = e075der.codemb
+	   
+LEFT JOIN E059age 
+	   on e059emb.codaem = e059age.codage
+
+LEFT JOIN e026ram
+       ON e026ram.codram = e085cli.codram
+LEFT JOIN e069gre
+       ON e069gre.codgre = e085cli.codgre
+
+LEFT JOIN e075pro 
+       ON e075pro.codemp = e140ipv.codemp
+      AND e075pro.codpro = e140ipv.codpro
+left join e000cor 
+	on e075pro.codcor = e000cor.codcor
+LEFT JOIN e013agp
+       ON e013agp.codemp = e140ipv.codemp
+      AND e013agp.codagp = e075pro.codagm
+left join e076mar on
+	e076mar.codmar = e075pro.codmar 
+LEFT JOIN e084cmd
+    ON e084cmd.codemp = e140ipv.codemp
+    AND (
+        (e140ipv.codemp <> 100 AND (
+            (e075pro.codfam NOT IN ('11.03', '11.05')
+                AND e084cmd.codmdp = e075pro.codmdp
+                AND e084cmd.codder = (
+                    SELECT TOP 1 codder 
+                    FROM e075der 
+                    WHERE e075der.codemp = e140ipv.codemp 
+                    AND e075der.codpro = e140ipv.codpro
+                    AND e075der.sitder = 'A'
+                )
+            )
+            OR (e075pro.codfam IN ('11.03', '11.05')
+                AND e084cmd.codmdp = '01'
+                AND e084cmd.codder = 'P'
+            )
+        ))
+        OR (e140ipv.codemp = 100 AND
+            e084cmd.codmdp = e075pro.codmdp
+            AND e084cmd.codder = e140ipv.codder
+        )
+    )	
+/*LEFT JOIN e084cmd
+       ON e084cmd.codemp = e140ipv.codemp
+      AND e084cmd.codmdp = e075pro.codmdp
+      AND e084cmd.codder = (SELECT TOP 1 codder 
+                              FROM e075der 
+                             WHERE e075der.codemp = e140ipv.codemp 
+                               AND e075der.codpro = e140ipv.codpro
+                               AND e075der.sitder='A')*/
+LEFT JOIN e006pai
+       ON e006pai.codpai = e085cli.codpai
+LEFT JOIN usu_tfindsc
+       ON usu_tfindsc.usu_iddsc = e085cli.usu_iddsc
+      AND usu_tfindsc.usu_sitreg = 'A'   
+LEFT JOIN usu_tfindsc usu_tfindsc1
+       ON usu_tfindsc1.usu_iddsc = e140nfv.usu_iddsc    
+LEFT JOIN e001tns 
+       ON e001tns.codemp = e140ipv.codemp
+      AND e001tns.codtns = e140ipv.tnspro
+    WHERE e001tns.venfat='S'
+      AND e140nfv.sitnfv=2
+	  and e140nfv.datemi >= '01/01/2019' 
+	  AND e140nfv.codsnf NOT IN ('INC')
+	  and e140nfv.codemp not in (3,14,8)
+	  AND NOT (e140nfv.codemp = 18 AND e140nfv.codcli = 35623)
+
+UNION ALL
+SELECT
+          'NF Devolução' AS 'Tipo_NF',
+          e440ipc.codemp 'Codigo_Empresa',
+          case 
+				when e070emp.codemp = 18 and e070fil.codfil = 2 then
+					concat(e070emp.sigemp,' GO')
+				when e070emp.codemp = 18 and e070fil.codfil <> 2 then
+					concat(e070emp.sigemp,' ES')
+				else
+					e070emp.sigemp
+				end 'Empresa',
+          e440ipc.codfil 'Codigo_Filial',
+          e070fil.sigfil 'Filial',
+          CONVERT(DATETIME, '01/'+CAST(MONTH(e440nfc.datent) AS CHAR(2))+'/'+CAST(YEAR(e440nfc.datent) AS CHAR(4)), 103) 'Competencia',
+          e440nfc.datemi 'Emissao',
+          e440nfc.datent 'Entrada',
+          e440nfc.codsnf 'Serie',
+          e440nfc.numnfc 'Nota',
+          e440nfc.codfor 'Cod_Cli_For',
+          e095for.apefor 'Cliente_Fornecedor',
+          e095for.codram 'Codigo_Ramo',
+          e026ram.desram 'Ramo',
+          e095for.codgre 'Cod_Grupo',
+          e069gre.nomgre 'Grupo',
+          e095for.endfor 'Endereco',
+          e095for.nenfor 'Numero',
+          e095for.baifor 'Bairro',
+		  e095for.sigufs 'Estado',
+          e095for.cidfor 'Cidade',
+          e095for.cepfor 'CEP',
+          e006pai.nompai 'Pais',
+          e440ipc.seqipc 'Item',
+          e440nfc.tnspro 'Transacao',
+          e440nfc.numocp 'Pedido_OC',
+          e440ipc.codpro 'Cod_Produto',
+          e075pro.despro 'Produto',
+          e440ipc.codfam 'Cod_Familia',
+          e012fam.desfam 'Familia',
+          e440ipc.coddep 'Deposito',
+          e013agp.desagp 'Agrupamento',
+          e440ipc.qtdest*-1 'Qtd_Estoque',
+          e440ipc.unimed 'UN_Estoque',
+          e440ipc.preuni*-1 'Preco_UN',
+          e440ipc.usu_qtdrec*-1 'Qtd_Faturada',
+          e440ipc.usu_uninfc 'UN_Faturada',
+          e084cmd.usu_qtdder 'Qtde_Derivacao',
+          e084cmd.desder 'Derivacao',
+          e059emb.usu_qtdcon 'Qtd_Embalgem',
+		  
+		  
+          CASE 
+				WHEN (E440IPC.usu_uninfc = E075PRO.unime3) THEN
+          		(((E440IPC.usu_qtdrec) /(e075der.vlrcn3)*COALESCE( e084cmd.usu_qtdder,  360 ))/COALESCE((e059emb.usu_qtdcon), 360)) *-1          
+          		WHEN (E440IPC.usu_uninfc = E075PRO.unime2) THEN
+          		(((E440IPC.usu_qtdrec) /(e075der.vlrcn2)*COALESCE( e084cmd.usu_qtdder,  360 ))/COALESCE((e059emb.usu_qtdcon), 360)) *-1
+          		WHEN (E440IPC.usu_uninfc = E075PRO.unimed)THEN
+          		(e440ipc.usu_qtdrec*COALESCE((e084cmd.usu_qtdder), COALESCE((e075der.vlrcn2),  360))/COALESCE((e059emb.usu_qtdcon), 1))*-1          		
+          END
+           'CX_360',
+
+		   
+		  COALESCE((e059emb.desemb), 'OUTROS') 'Embalagem',
+          e440ipc.preuni*-1 'Preco_Faturado',
+          e440ipc.vlrliq*-1 'Valor_Bruto',
+		  
+		  
+		  case  
+		  when (( e001tns.usu_codtip = 3) or ( e001tns.usu_codtip = 1))  then
+				case
+						when ( usu_tfindsc.usu_frmdsc = 1 or usu_tfindsc.usu_frmdsc = 3) then
+								coalesce(e440ipc.vlrliq * e140ipv.usu_perdscfin/100,0)	 * -1			
+						else
+								coalesce(e440ipc.vlrliq * e140ipv.usu_perdscfin/100,0)	 * -1
+				end else
+				 0 
+		  end AS 'Valor_Desconto',
+		  
+		  
+		  coalesce(
+		  case
+				when  (( e001tns.usu_codtip = 3) or ( e001tns.usu_codtip = 1))  then
+				case
+					when (( usu_tfindsc.usu_frmdsc = 1 or usu_tfindsc.usu_frmdsc = 3)and ( coalesce( e140ipv.usu_perdscfin,0) > 0)) then
+						coalesce(e440ipc.vlrliq - (e440ipc.vlrliq * e140ipv.usu_perdscfin/100),0) * -1				
+					when ( usu_tfindsc.usu_frmdsc = 2) and ( coalesce( e140ipv.usu_perdscfin,0) > 0) then
+						coalesce(e440ipc.vlrliq - (e440ipc.vlrliq * e140ipv.usu_perdscfin/100),0) *-1
+					else e440ipc.vlrliq *-1
+				end	
+				else e440ipc.vlrliq *-1
+		  end,0) + 	(e440ipc.vlricm + e440ipc.vlrpif + e440ipc.vlrcff ) + case 
+		 
+			when ((e440ipc.vlricm > 0) and (e440ipc.codemp = 18) and (e440ipc.codfil = 7 ))then
+				(e440ipc.vlrbic * (10.9/100)) *-1
+			else
+				0 End as  'Valor_Liquido',
+				
+				
+		  case 
+		  when (( e001tns.usu_codtip = 3) or ( e001tns.usu_codtip = 1))  then
+		  case
+				when ( usu_tfindsc.usu_frmdsc = 1 or usu_tfindsc.usu_frmdsc = 3) then
+						coalesce(e140ipv.usu_perdscfin,0)				
+				else
+					coalesce(e140ipv.usu_perdscfin,0)
+
+		  end
+		  		  else 0
+		  end
+		  as 'Perc_Desconto',
+		  
+		  
+          r996lsf.valkey 'Situacao',
+          e095for.codcli 'Cod_Refer',
+	   e095for.datcad 'Data_Cadastro',
+	  e090rep.nomrep 'Representante', 
+	  
+	  case 
+				when (( e001tns.usu_codtip = 3) or ( e001tns.usu_codtip = 1))  then
+					cast((e440ipc.vlricm * -1) as decimal(15,2))
+				else 
+					cast((e440ipc.vlricm * -1) as decimal(15,2))
+				end Valor_Icms, 
+	  case 
+				when  (( e001tns.usu_codtip = 3) or ( e001tns.usu_codtip = 1))  then			
+						cast(e440ipc.vlrpif * -1  as decimal(15,2))
+				else 
+						cast(e440ipc.vlrpif * -1  as decimal(15,2))
+		end Valor_Pis ,
+	  case 
+				when  (( e001tns.usu_codtip = 3) or ( e001tns.usu_codtip = 1))  then		
+					Cast(e440ipc.vlrcff *-1 as decimal(15,2))
+				else
+					Cast(e440ipc.vlrcff *-1 as decimal(15,2))
+			end
+					Valor_Cofins,
+	    
+	   case	
+		when e076mar.codmar is null then	
+			'OUTRAS RECEITAS'
+			else
+	   e076mar.nommar
+	   end Nome_Marca,
+	(select usu_Destip From usu_ttiptns where e001tns.usu_codtip = usu_ttiptns.usu_codtip) as tipo,
+	e095hfo.usu_km km,
+CONVERT( DECIMAL(10,2),
+		CASE 
+			WHEN e076mar.codmar IN( 'ADUBO','OUTROS') THEN 0
+		ELSE
+			CASE
+				WHEN e059emb.codemb = 34 THEN
+					CASE
+						WHEN E440IPC.usu_uninfc = E075PRO.unime3 THEN 
+							-1 * (((((E440IPC.usu_qtdrec) / NULLIF(COALESCE(e075der.vlrcn3,1),0) * COALESCE(e084cmd.usu_qtdder,1)) / NULLIF(COALESCE(e059emb.usu_qtdcon,1),0)) 
+							* NULLIF(COALESCE(e059emb.usu_cx3mul,1),0)) / NULLIF(COALESCE(e059emb.usu_cx3div,1),0))
+						WHEN E440IPC.usu_uninfc = E075PRO.unime2 THEN 
+							-1 * (((((E440IPC.usu_qtdrec) / NULLIF(COALESCE(e075der.vlrcn2,1),0) * COALESCE(e084cmd.usu_qtdder,1)) / NULLIF(COALESCE(e059emb.usu_qtdcon,1),0)) 
+							* NULLIF(COALESCE(e059emb.usu_cx3mul,1),0)) / NULLIF(COALESCE(e059emb.usu_cx3div,1),0))
+						ELSE 
+							-1 * ((((E440IPC.usu_qtdrec * COALESCE(e084cmd.usu_qtdder,1)) / NULLIF(COALESCE(e059emb.usu_qtdcon,1),0)) 
+							* NULLIF(COALESCE(e059emb.usu_cx3mul,1),0)) / NULLIF(COALESCE(e059emb.usu_cx3div,1),0))
+					END
+
+				WHEN e059emb.codemb IN (33, 48, 49) THEN
+					CASE
+						WHEN E440IPC.usu_uninfc = E075PRO.unime3 THEN 
+							-1 * (((((E440IPC.usu_qtdrec) / NULLIF(COALESCE(e075der.vlrcn3,1),0) * COALESCE(e084cmd.usu_qtdder,1)) / NULLIF(COALESCE(e059emb.usu_qtdcon,1),0)) 
+							* NULLIF(COALESCE(e059emb.usu_cx3mul,1),0)) / NULLIF(COALESCE(e059emb.usu_cx3div,1),0))
+						WHEN E440IPC.usu_uninfc = E075PRO.unime2 THEN 
+							-1 * (((((E440IPC.usu_qtdrec) / NULLIF(COALESCE(e075der.vlrcn2,1),0) * COALESCE(e084cmd.usu_qtdder,1)) / NULLIF(COALESCE(e059emb.usu_qtdcon,1),0)) 
+							* NULLIF(COALESCE(e059emb.usu_cx3mul,1),0)) / NULLIF(COALESCE(e059emb.usu_cx3div,1),0))
+						ELSE 
+							-1 * ((((E440IPC.usu_qtdrec * COALESCE(e084cmd.usu_qtdder,1)) / NULLIF(COALESCE(e059emb.usu_qtdcon,1),0)) 
+							* NULLIF(COALESCE(e059emb.usu_cx3mul,1),0)) / NULLIF(COALESCE(e059emb.usu_cx3div,1),0))
+					END
+
+				WHEN e059emb.codemb IN (36, 37, 38) THEN
+					CASE
+						WHEN E440IPC.usu_uninfc = E075PRO.unime3 THEN 
+							-1 * ((((((E440IPC.usu_qtdrec) / NULLIF(COALESCE(e075der.vlrcn3,1),0) * COALESCE(e084cmd.usu_qtdder,1)) / NULLIF(COALESCE(e059emb.usu_qtdcon,1),0)) 
+							/ NULLIF(COALESCE(e059emb.usu_cx3div,1),0)) * (NULLIF(COALESCE(e059emb.usu_fatccx,1),0) / 100)))
+						WHEN E440IPC.usu_uninfc = E075PRO.unime2 THEN 
+							-1 * ((((((E440IPC.usu_qtdrec) / NULLIF(COALESCE(e075der.vlrcn2,1),0) * COALESCE(e084cmd.usu_qtdder,1)) / NULLIF(COALESCE(e059emb.usu_qtdcon,1),0)) 
+							/ NULLIF(COALESCE(e059emb.usu_cx3div,1),0)) * (NULLIF(COALESCE(e059emb.usu_fatccx,1),0) / 100)))
+						ELSE 
+							-1 * (((E440IPC.usu_qtdrec * COALESCE(e084cmd.usu_qtdder,1)) / NULLIF(COALESCE(e059emb.usu_cx3div,1),0)) * (NULLIF(COALESCE(e059emb.usu_fatccx,1),0) / 100))
+					END
+				
+				WHEN e059emb.codemb IN (29, 27, 28, 30, 53) THEN
+					CASE
+						WHEN E440IPC.usu_uninfc = E075PRO.unime3 THEN 
+							-1 * (((E440IPC.usu_qtdrec) / NULLIF(COALESCE(e075der.vlrcn3,1),0) * COALESCE(e084cmd.usu_qtdder,1)) / NULLIF(COALESCE(e059emb.usu_cx3div,1),0))
+						WHEN E440IPC.usu_uninfc = E075PRO.unime2 THEN 
+							-1 * (((E440IPC.usu_qtdrec) / NULLIF(COALESCE(e075der.vlrcn2,1),0) * COALESCE(e084cmd.usu_qtdder,1)) / NULLIF(COALESCE(e059emb.usu_cx3div,1),0))
+						ELSE 
+							-1 * ((E440IPC.usu_qtdrec * COALESCE(e084cmd.usu_qtdder,1)) / NULLIF(COALESCE(e059emb.usu_cx3div,1),0))
+					END				
+							
+				ELSE 
+					CASE
+						WHEN E440IPC.usu_uninfc = E075PRO.unime3 THEN 
+							-1 * (((E440IPC.usu_qtdrec) / NULLIF(COALESCE(e075der.vlrcn3,1),0) * COALESCE(e084cmd.usu_qtdder,1)) / NULLIF(COALESCE(e059emb.usu_qtdcon,1),0))
+						WHEN E440IPC.usu_uninfc = E075PRO.unime2 THEN 
+							-1 * (((E440IPC.usu_qtdrec) / NULLIF(COALESCE(e075der.vlrcn2,1),0) * COALESCE(e084cmd.usu_qtdder,1)) / NULLIF(COALESCE(e059emb.usu_qtdcon,1),0))
+						ELSE 
+							-1 * ((E440IPC.usu_qtdrec * COALESCE(e084cmd.usu_qtdder,1)) / NULLIF(COALESCE(e059emb.usu_qtdcon,1),0))
+					END
+			END
+		END ) AS  'CX360_IND',
+
+	  e440ipc.vlrliq*-1 'Valor_Bruto_Total',
+		  e440nfc.codtra cod_transportadora,
+		  e073tra.nomtra nome_transportadora,
+		  E059age.desage agrupamento_embalagem,
+		  e440ipc.codder 'Cod_Derivacao',
+		  e084cmd.usu_qtdder 'Qtde_Nova',
+		  e440nfc.sitnfc 'Cod_Situacao',
+		 e440ipc.vlrfre * -1 'frete_item',
+		 e090rep.codrep 'Cod_Representante',
+		 e440nfc.datent 'Dia_Competencia',		
+		 e095for.cgccpf 'CNPJ_Cliente',
+		 e095for.insest 'IE_Cliente',
+		 e000cor.descor 'COR',
+		 0 'Desc_SellOut',
+			 case 
+		 
+			when ((e440ipc.vlricm > 0) and (e440ipc.codemp = 18) and (e440ipc.codfil = 7 ))then
+				(e440ipc.vlrbic * (10.9/100))
+			else
+				0 End'Valor_ICMSREDUZIDO',
+	   0	Valor_ISS,
+	   e075der.vlrcn2 VlrCnv2_der,
+		 e070fil.usu_longitude longitudeFilial,
+		 e070fil.usu_latitude  latitudeFilial,
+		 TRY_CAST(e085cli.vlrlon AS FLOAT) AS longitude,
+		 TRY_CAST(e085cli.vlrlat AS FLOAT) AS   latitude,	
+		 0 Frete_terceiro   
+     FROM e440ipc
+LEFT JOIN e070emp
+       ON e070emp.codemp = e440ipc.codemp
+LEFT JOIN e070fil 
+       ON e070fil.codemp = e440ipc.codemp
+      AND e070fil.codfil = e440ipc.codfil
+LEFT JOIN e440nfc
+       ON e440nfc.codemp = e440ipc.codemp
+      AND e440nfc.codfil = e440ipc.codfil
+      AND e440nfc.numnfc = e440ipc.numnfc
+      AND e440nfc.codsnf = e440ipc.codsnf
+      AND e440nfc.codfor = e440ipc.codfor
+-----------------------------------------------------
+	  LEFT JOIN e140ipv
+			 ON e140ipv.codemp = e440ipc.codemp
+			AND e140ipv.codfil = e440ipc.codfil
+			AND e140ipv.numnfv = e440ipc.numnfv
+			AND e140ipv.seqipv = e440ipc.seqipc
+-----------------------------------------------------
+
+LEFT JOIN e095for 
+       ON e095for.codfor = e440nfc.codfor
+LEFT JOIN E085cli
+		ON e095for.codcli = e085cli.codcli
+left join e073tra on
+	e073tra.codtra = e440nfc.codtra 
+left join e095hfo 
+		on e095hfo.codemp = e440nfc.codemp 
+		and e095hfo.codfil = e440nfc.codfil
+		and e095hfo.codfor = e440nfc.codfor
+LEFT JOIN E085hcl
+		on e085hcl.codemp = e095hfo.codemp 
+	and e085hcl.codfil = e095hfo.codfil 
+	and e085hcl.codcli = e095for.codcli
+left join e090rep 
+	  on e090rep.codrep = e085hcl.codrep
+LEFT JOIN e026ram
+       ON e026ram.codram = e095for.codram
+LEFT JOIN e069gre
+       ON e069gre.codgre = e095for.codgre
+LEFT JOIN e012fam 
+       ON e012fam.codemp = e440nfc.codemp
+      AND e012fam.codfam = e440ipc.codfam
+LEFT JOIN e075pro 
+       ON e075pro.codemp = e440ipc.codemp 
+      AND e075pro.codpro = e440ipc.codpro
+left join e000cor 
+	on e075pro.codcor = e000cor.codcor
+left join e076mar on
+	e076mar.codmar = e075pro.codmar
+LEFT JOIN e013agp
+       ON e013agp.codemp = e440nfc.codemp
+      AND e013agp.codagp = e075pro.codagm
+LEFT JOIN r996lsf
+       ON r996lsf.keynam = e440nfc.sitnfc
+      AND r996lsf.lstnam = 'LSitNfs'
+LEFT JOIN e075der 
+    ON e075der.codemp = e440ipc.codemp
+    AND e075der.codpro = e440ipc.codpro
+    AND (
+        e440ipc.codemp = 100 
+        AND e075der.codder = e440ipc.codder
+        OR e440ipc.codemp <> 100 
+        AND e075der.codder = (
+            SELECT TOP 1 codder 
+            FROM e075der 
+            WHERE e075der.codemp = e440ipc.codemp 
+            AND e075der.codpro = e440ipc.codpro 
+            AND e075der.sitder = 'A'
+        )
+    )
+LEFT JOIN e059emb
+       ON e059emb.codemb = e075der.codemb
+LEFT JOIN E059age 
+	   on e059emb.codaem = e059age.codage
+LEFT JOIN e084cmd
+    ON e084cmd.codemp = e440ipc.codemp
+    AND (
+        (e440ipc.codemp <> 100 AND (
+    (e075pro.codfam NOT IN ('11.03', '11.05')
+                AND e084cmd.codmdp = e075pro.codmdp
+AND e084cmd.codder = (
+                    SELECT TOP 1 codder 
+                    FROM e075der 
+                    WHERE e075der.codemp = e440ipc.codemp 
+                    AND e075der.codpro = e440ipc.codpro
+                    AND e075der.sitder = 'A'
+                )
+            )
+            OR (e075pro.codfam IN ('11.03', '11.05')
+                AND e084cmd.codmdp = '01'
+                AND e084cmd.codder = 'P'
+            )
+        ))
+        OR (e440ipc.codemp = 100 AND
+            e084cmd.codmdp = e075pro.codmdp
+            AND e084cmd.codder = e440ipc.codder
+        )
+    )
+      /*AND e084cmd.codmdp = e075pro.codmdp
+      AND e084cmd.codder = (SELECT TOP 1 codder 
+                              FROM e075der 
+                             WHERE e075der.codemp = e440ipc.codemp 
+                               AND e075der.codpro = e440ipc.codpro
+                               AND e075der.sitder='A')*/
+LEFT JOIN e006pai
+       ON e006pai.codpai = e095for.codpai
+LEFT JOIN e001tns 
+       ON e001tns.codemp = e440ipc.codemp
+      AND e001tns.codtns = e440ipc.tnspro   
+LEFT JOIN usu_tfindsc
+       ON usu_tfindsc.usu_iddsc = e085cli.usu_iddsc
+      AND usu_tfindsc.usu_sitreg = 'A' 
+LEFT JOIN usu_tfincfgdsc 
+       ON usu_tfindsc.usu_iddsc = usu_tfincfgdsc.usu_iddsc
+	      and ( ( usu_tfincfgdsc.usu_cfgtip = 4 and
+				  usu_tfincfgdsc.usu_codemp = e440ipc.codemp and
+				  usu_tfincfgdsc.usu_codemb = e075der.codemb AND
+				  usu_tfincfgdsc.usu_codfil = e440ipc.codfil) or
+				( usu_tfincfgdsc.usu_cfgtip = 3 and
+				  usu_tfincfgdsc.usu_codemp = e440ipc.codemp and
+				  usu_tfincfgdsc.usu_codpro = e440ipc.codpro and
+				  usu_tfincfgdsc.usu_codder = e440ipc.codder AND
+				  usu_tfincfgdsc.usu_codfil = e440ipc.codfil) or
+				( usu_tfincfgdsc.usu_cfgtip = 2 and
+				  usu_tfincfgdsc.usu_codemp = e440ipc.codemp and
+				  usu_tfincfgdsc.usu_codpro = e440ipc.codpro AND
+				  usu_tfincfgdsc.usu_codfil = e440ipc.codfil)  or
+				( usu_tfincfgdsc.usu_cfgtip = 1 and
+				  usu_tfincfgdsc.usu_codemp = e440ipc.codemp and
+				  usu_tfincfgdsc.usu_codfam = e440ipc.codfam and 
+				  usu_tfincfgdsc.usu_codfil = e440ipc.codfil)		  
+		  )
+
+    WHERE e440nfc.codsnf IN ('NFE', 'NF','55','56', '1', '2', '3')
+      AND e001tns.cprdev='S'
+      AND e440nfc.sitnfc in ('1','2')
+	  and e440nfc.datent >= '01/01/2019'
+	  and e440nfc.codemp not in (3,14,8)
+	  and not (e440nfc.codemp = 18 and e440nfc.codfor = 27374)
+	  and ( exists (select 1 from e614apr 
+						where e614apr.codemp = e440nfc.codemp 
+						  and e614apr.codfil = e440nfc.filapr
+						  and e614apr.numapr = e440nfc.numapr
+						  and e614apr.rotnap = e440nfc.rotnap
+						  and e614apr.sitapr <> 'REP') or
+						   e440nfc.numapr = 0
+						  )
+
+UNION ALL 
+SELECT  
+          'NF Serviço' AS 'Tipo_NF',
+          e140isv.codemp 'Codigo_Empresa',
+          case 
+				when e070emp.codemp = 18 and e070fil.codfil = 2 then
+					concat(e070emp.sigemp,' GO')
+				when e070emp.codemp = 18 and e070fil.codfil <> 2 then
+					concat(e070emp.sigemp,' ES')
+				else
+					e070emp.sigemp
+				end 'Empresa',
+          e140isv.codfil 'Codigo_Filial',
+          e070fil.sigfil 'Filial',
+          CONVERT(DATETIME, '01/'+CAST(MONTH(e140nfv.datemi) AS CHAR(2))+'/'+CAST(YEAR(e140nfv.datemi) AS CHAR(4)), 103) 'Competencia',
+          e140nfv.datemi 'Emissao',
+          e140nfv.datger 'Entrada',
+          e140isv.codsnf 'Serie',
+          e140isv.numnfv 'Nota',
+          e140nfv.codcli 'Cod_Cli_For',
+          e085cli.apecli 'Cliente_Fornecedor',
+          e085cli.codram 'Codigo_Ramo',
+          e026ram.desram 'Ramo',
+          e085cli.codgre 'Cod_Grupo',
+          e069gre.nomgre 'Grupo',
+          e085cli.endcli 'Endereco',
+          e085cli.nencli 'Numero',
+          e085cli.baicli 'Bairro',
+          e085cli.sigufs 'Estado',
+          e085cli.cidcli 'Cidade',
+          e085cli.cepcli 'CEP',
+          e006pai.nompai 'Pais',
+          e140isv.seqisv 'Item',
+          e140isv.tnsser 'Transacao',
+          e140isv.numped 'Pedido_OC',
+		  e140isv.codser 'Cod_ProSer',
+          e140isv.cplisv '`ProSer',
+          e140isv.codfam 'Cod_Familia',
+          e012fam.desfam 'Familia',
+          '' 'Deposito',
+          '' 'Agrupamento',
+          CASE e001tns.cprdev	
+           WHEN 'S' THEN e140isv.qtdfat*-1
+            ELSE CASE e001tns.ventip
+                   WHEN 'B' THEN e140isv.qtdfat*-1
+                    ELSE e140isv.qtdfat
+                 END
+          END as'Qtd_Estoque',
+          e140isv.unimed 'UN_Estoque',
+          CASE e001tns.cprdev
+           WHEN 'S' THEN e140isv.preuni*-1
+            ELSE CASE e001tns.ventip
+                   WHEN 'B' THEN e140isv.preuni*-1
+                    ELSE e140isv.preuni
+                 END
+          END AS 'Preco_UN',
+          CASE e001tns.cprdev
+           WHEN 'S' THEN e140isv.qtdfat*-1
+            ELSE CASE e001tns.ventip
+                   WHEN 'B' THEN e140isv.qtdfat*-1
+                    ELSE e140isv.qtdfat
+                 END 
+          END AS 'Qtd_Faturada',
+          e140isv.unimed 'UN_Faturada',
+          1 'Qtde_Derivacao',
+          '' 'Derivacao',
+          1 'Qtd_Embalgem',
+          
+          0 'CX_360',   
+          
+          'OUTROS' 'Embalagem',
+          CASE e001tns.cprdev
+           WHEN 'S' THEN e140isv.preuni*-1
+             ELSE CASE e001tns.ventip
+                   WHEN 'B' THEN e140isv.preuni*-1
+                    ELSE e140isv.preuni
+                  END 
+          END AS 'Preco_Faturado',
+          CASE e001tns.cprdev
+           WHEN 'S' THEN e140isv.vlrliq*-1
+             ELSE CASE e001tns.ventip
+                   WHEN 'B' THEN e140isv.vlrliq*-1
+                    ELSE e140isv.vlrliq
+                  END 
+          END AS 'Valor_Bruto',
+          COALESCE(CASE e001tns.cprdev
+           WHEN 'S' THEN ((e140isv.vlrliq*(usu_tfindsc.usu_perdsc/100))*-1)
+             ELSE CASE e001tns.ventip
+                   WHEN 'B' THEN ((e140isv.vlrliq*(usu_tfindsc.usu_perdsc/100))*-1)
+                  ELSE e140isv.vlrliq*(usu_tfindsc.usu_perdsc/100)
+         END
+          END, 0) AS 'Valor_Desconto',
+          --
+          
+         (CASE e001tns.cprdev
+           WHEN 'S' THEN e140isv.vlrliq*-1
+              ELSE CASE e001tns.ventip
+                    WHEN 'B' THEN e140isv.vlrliq*-1
+                   ELSE e140isv.vlrliq
+              END
+          END) -
+          (COALESCE(CASE e001tns.cprdev
+           WHEN 'S' THEN ((e140isv.vlrliq*(usu_tfindsc.usu_perdsc/100))*-1)             
+             ELSE CASE e001tns.ventip
+                    WHEN 'B' THEN ((e140isv.vlrliq*(usu_tfindsc.usu_perdsc/100))*-1)
+                  ELSE e140isv.vlrliq*(usu_tfindsc.usu_perdsc/100)
+             END
+          END, 0)) -  COALESCE(( e140isv.vlricm + e140isv.vlrpif + e140isv.vlrcff + e140isv.vlriss), 0)   AS 'Valor_Liquido',
+          --
+          COALESCE((usu_tfindsc.usu_perdsc), 0) 'Perc_Desconto',
+          r996lsf.valkey 'Situacao',
+          e085cli.codfor 'Cod_Refer',
+	   e085cli.datcad 'Data_Cadastro',
+	   e090rep.nomrep 'Representante',
+	   cast( e140isv.vlricm as decimal(15,2)) Valor_Icms, cast(e140isv.vlrpif  as decimal(15,2)) Valor_Pis ,Cast(e140isv.vlrcff as decimal(15,2)) Valor_Cofins, 
+	   'OUTRAS VENDAS' Nome_marca,
+	(select usu_Destip From usu_ttiptns where e001tns.usu_codtip = usu_ttiptns.usu_codtip) as tipo,
+	e085hcl.usu_km km,
+	0 as 'CX360_IND',
+	          CASE e001tns.cprdev
+           WHEN 'S' THEN e140isv.vlrliq*-1
+             ELSE CASE e001tns.ventip
+                   WHEN 'B' THEN e140isv.vlrliq*-1
+                    ELSE e140isv.vlrliq
+                  END 
+          END AS 'Valor_Bruto_Total',
+		  e140nfv.codtra cod_transportadora,
+		  e073tra.nomtra nome_transportadora,
+		  '' agrupamento_embalagem,
+		'SER' 'Cod_Derivacao',
+		1 'Qtde_Nova',
+		e140nfv.sitnfv 'Cod_Situacao',
+		 0 'frete_item',
+		 e090rep.codrep 'Cod_Representante',
+		 e140nfv.datemi 'Dia_Competencia',		
+		 e085cli.cgccpf 'CNPJ_Cliente',
+		 e085cli.insest 'IE_Cliente',
+		 ' ' 'COR',
+		 0 'Desc_SellOut',
+		 0 'Valor_ICMSREDUZIDO',
+		 e140isv.vlriss Valor_ISS,
+		 0 VlrCnv2_der,
+		 e070fil.usu_longitude longitudeFilial,
+		 e070fil.usu_latitude  latitudeFilial,
+		 TRY_CAST(e085cli.vlrlon AS FLOAT) AS longitude,
+		 TRY_CAST(e085cli.vlrlat AS FLOAT) AS   latitude,
+		 0 Frete_terceiro		 
+     FROM e140isv
+LEFT JOIN e070emp 
+       ON e070emp.codemp = e140isv.codemp
+LEFT JOIN e070fil 
+       ON e070fil.codfil = e140isv.codfil
+      AND e070fil.codemp = e140isv.codemp
+LEFT JOIN e140nfv
+       ON e140nfv.codemp = e140isv.codemp 
+      AND e140nfv.codfil = e140isv.codfil 
+      AND e140nfv.codsnf = e140isv.codsnf 
+      AND e140nfv.numnfv = e140isv.numnfv
+LEFT JOIN r996lsf
+       ON r996lsf.keynam = e140nfv.sitnfv
+      AND r996lsf.lstnam = 'LSitNfs'
+LEFT JOIN e012fam
+       ON e012fam.codemp = e140isv.codemp
+      AND e012fam.codfam = e140isv.codfam
+LEFT JOIN e085cli
+       ON e085cli.codcli = e140nfv.codcli
+LEFT join e085hcl on
+	e085hcl.codemp = e140nfv.codemp and
+	e085hcl.codfil = e140nfv.codfil and
+	e085hcl.codcli = e140nfv.codcli
+left join e073tra on
+	e073tra.codtra = e140nfv.codtra 
+left join e090hrp on
+	e085hcl.codemp = e090hrp.codemp and
+	e085hcl.codrep = e090hrp.codrep
+left join e090rep on
+	e090rep.codrep = e090hrp.codrep
+LEFT JOIN e026ram
+       ON e026ram.codram = e085cli.codram
+LEFT JOIN e069gre
+       ON e069gre.codgre = e085cli.codgre
+LEFT JOIN e006pai
+       ON e006pai.codpai = e085cli.codpai
+LEFT JOIN usu_tfindsc
+       ON usu_tfindsc.usu_iddsc = e085cli.usu_iddsc
+      AND usu_tfindsc.usu_sitreg = 'A'       
+LEFT JOIN e001tns 
+       ON e001tns.codemp = e140isv.codemp
+      AND e001tns.codtns = e140isv.tnsser
+    WHERE e001tns.venfat='S'
+      AND e140nfv.sitnfv=2	 
+	  and e140nfv.datemi >= '01/01/2019'
+	  and e140nfv.codemp not in (3,14,8)
