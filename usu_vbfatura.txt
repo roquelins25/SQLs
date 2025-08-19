@@ -253,6 +253,7 @@ END as money )as 'Valor_Liquido',
 	   END ) --'Valor_ICMSREDUZIDO1' 
 	   )) as 'Impostos',
 		  '' chaveNF,
+		  e140ipv.vlrfre 'frete_item',
 		  FORMAT(DATEADD(MINUTE, e140nfv.horger, 0), 'HH:mm') hora_geracao
 
      FROM e140ipv
@@ -561,6 +562,7 @@ UNION ALL
 	
 	) )as 'Impostos',
 		 e440nfc.chvnel chaveNF,
+		 e440ipc.vlrfre * -1 'frete_item',
 FORMAT(DATEADD(MINUTE, e440nfc.horger, 0), 'HH:mm') hora_geracao
      FROM e440ipc
 LEFT JOIN e070emp
@@ -824,6 +826,7 @@ SELECT
 
 		 0 'Desc_SellOut',
 		 '' chaveNF,
+		 0 'frete_item',
 		 FORMAT(DATEADD(MINUTE, e140nfv.horger, 0), 'HH:mm') hora_geracao
 
      FROM e140isv
