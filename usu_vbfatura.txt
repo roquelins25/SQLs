@@ -56,25 +56,31 @@ select
           
 		  e140ipv.qtdven  AS 'Qtd_Faturada',
           
-		  CASE            
-				   WHEN (e001tns.cprdev='S') THEN
-					 (e140ipv.qtdven*COALESCE((e084cmd.usu_qtdder), 1)/COALESCE((e059emb.usu_qtdcon), 1))
-				   WHEN ((e001tns.ventip='B') AND (e075der.codder=''))
-							 THEN e140ipv.qtdven
-				  WHEN ((E140IPV.univen = E075PRO.unime3)) THEN
-						 (((e140ipv.qtdven) /NULLIF(e075der.vlrcn3,0)) *COALESCE( e084cmd.usu_qtdder,  360 )/COALESCE((e059emb.usu_qtdcon), 360))                     
-				   WHEN ((E140IPV.univen = E075PRO.unime2)) THEN
-						 (((e140ipv.qtdven) /NULLIF(e075der.vlrcn2,0)) *COALESCE( e084cmd.usu_qtdder,  360 )/COALESCE((e059emb.usu_qtdcon), 360))
-						 
-				   WHEN (e140ipv.codpro = '10040005' AND e140ipv.codder = '06F360') THEN ( e140ipv.qtdven * 1 ) / COALESCE(e059emb.usu_qtdcon, 360)
-				   
-				   ELSE (e140ipv.qtdven*COALESCE((e084cmd.usu_qtdder),  COALESCE((e075der.vlrcn2),  360))/COALESCE((e059emb.usu_qtdcon), 360))
-						
-				  END  AS 'CX_360',  
-
+          --Daqui pra frente vida nova
+		  
+          CASE            
+           --Se for trasação de devolução ele vai negativar
+           WHEN (e001tns.cprdev='S') THEN
+             (e140ipv.qtdven*COALESCE((e084cmd.usu_qtdder), 1000000)/COALESCE((e059emb.usu_qtdcon), 1))
+           --quando não é devolução
+           /*WHEN ((e001tns.ventip='B') AND (e075der.codder<>''))
+                     THEN (e140ipv.qtdven*COALESCE((e084cmd.usu_qtdder), 1000000)/COALESCE((e059emb.usu_qtdcon), 1))*/
+           WHEN ((e001tns.ventip='B') AND (e075der.codder=''))
+                     THEN e140ipv.qtdven
+		  WHEN ((E140IPV.univen = E075PRO.unime3)) THEN
+           	     (((e140ipv.qtdven) /(e075der.vlrcn3)) *COALESCE( e084cmd.usu_qtdder,  360 )/COALESCE((e059emb.usu_qtdcon), 360))                     
+           
+		   WHEN (E140IPV.univen = E075PRO.unime2 AND e140ipv.codpro = '10080027' ) THEN (e140ipv.qtdven * COALESCE((e084cmd.usu_qtdder),  COALESCE((e075der.vlrcn2),  360))/COALESCE((e059emb.usu_qtdcon), 360))
+		   
+		   WHEN ((E140IPV.univen = E075PRO.unime2)) THEN
+           	     (((e140ipv.qtdven) /(e075der.vlrcn2)) *COALESCE( e084cmd.usu_qtdder,  360 )/COALESCE((e059emb.usu_qtdcon), 360))
+           ELSE (e140ipv.qtdven*COALESCE((e084cmd.usu_qtdder),  COALESCE((e075der.vlrcn2),  360))/COALESCE((e059emb.usu_qtdcon), 360))
+                
+          END AS 'CX_360',
 			
+CONVERT(DECIMAL(10,2),
 			CASE 
-				WHEN e076mar.codmar = 'ADUBO' THEN 0
+				WHEN e076mar.codmar IN( 'ADUBO','OUTROS') THEN 0
 			ELSE
 				CASE
 					WHEN e059emb.codemb = 34 THEN
@@ -117,30 +123,28 @@ select
 						
 					WHEN e059emb.codemb IN (29, 27, 28, 30, 53) THEN
 						CASE
-							WHEN ((e140ipv.codpro = '10040005') AND (e140ipv.codder = '06F360')) THEN ( e140ipv.qtdven * 1 ) / 360
-							
+							WHEN ((e140ipv.codpro = '10040005') AND (e140ipv.codemp = 100)) THEN ( e140ipv.qtdven * 1 ) / 360
+
 							WHEN E140IPV.univen = E075PRO.unime3 THEN 
 								(((e140ipv.qtdven) / NULLIF(COALESCE(e075der.vlrcn3,1),0) * COALESCE(e084cmd.usu_qtdder,1)) / NULLIF(COALESCE(e059emb.usu_cx3div,1),0))
 							WHEN E140IPV.univen = E075PRO.unime2 THEN 
 								(((e140ipv.qtdven) / NULLIF(COALESCE(e075der.vlrcn2,1),0) * COALESCE(e084cmd.usu_qtdder,1)) / NULLIF(COALESCE(e059emb.usu_cx3div,1),0))
-								
-							WHEN (e140ipv.codpro = '10040005' AND e140ipv.codder = '06F360') THEN ( e140ipv.qtdven * 1 ) / COALESCE(e059emb.usu_qtdcon, 360)
-							
 							ELSE 
 								((e140ipv.qtdven * COALESCE(e084cmd.usu_qtdder,1)) / NULLIF(COALESCE(e059emb.usu_cx3div,1),0))
 						END
 
 					ELSE 
 						CASE
-							WHEN E140IPV.univen = E075PRO.unime3 THEN 
-								(((e140ipv.qtdven) / NULLIF(COALESCE(e075der.vlrcn3,1),0) * COALESCE(e084cmd.usu_qtdder,1)) / NULLIF(COALESCE(e059emb.usu_qtdcon,1),0))
-							WHEN E140IPV.univen = E075PRO.unime2 THEN 
-								(((e140ipv.qtdven) / NULLIF(COALESCE(e075der.vlrcn2,1),0) * COALESCE(e084cmd.usu_qtdder,1)) / NULLIF(COALESCE(e059emb.usu_qtdcon,1),0))
+							WHEN E140IPV.univen = E075PRO.unime3 THEN (((e140ipv.qtdven) / NULLIF(COALESCE(e075der.vlrcn3,1),0) * COALESCE(e084cmd.usu_qtdder,1)) / NULLIF(COALESCE(e059emb.usu_qtdcon,1),0))
+							
+							WHEN (E140IPV.univen = E075PRO.unime2 AND e140ipv.codpro = '10080027' ) THEN (e140ipv.qtdven * COALESCE((e084cmd.usu_qtdder),  COALESCE((e075der.vlrcn2),  360))/COALESCE((e059emb.usu_qtdcon), 360))
+							WHEN E140IPV.univen = E075PRO.unime2 THEN (((e140ipv.qtdven) / NULLIF(COALESCE(e075der.vlrcn2,1),0) * COALESCE(e084cmd.usu_qtdder,1)) / NULLIF(COALESCE(e059emb.usu_qtdcon,1),0))
+							
 							ELSE 
 								((e140ipv.qtdven * COALESCE(e084cmd.usu_qtdder,1)) / NULLIF(COALESCE(e059emb.usu_qtdcon,1),0))
 						END
 				END 
-			END  AS 'CAIXA360',
+			END ) 'CAIXA360',
           
           CAST( CASE e001tns.cprdev
 				   WHEN 'S' THEN e140ipv.preven
@@ -402,22 +406,19 @@ UNION ALL
 		  e084cmd.usu_qtdder,
           e440ipc.usu_qtdrec*-1 'Qtd_Faturada',	  
           
-			CASE 
-				WHEN E440IPC.uninfc = E075PRO.unime3 THEN
-					(((E440IPC.usu_qtdrec / NULLIF(e075der.vlrcn3, 0)) * COALESCE(e084cmd.usu_qtdder, 360)) 
-					/ NULLIF(COALESCE(e059emb.usu_qtdcon, 360), 0)) * -1
-          
-				WHEN E440IPC.uninfc = E075PRO.unime2 THEN
-					(((E440IPC.usu_qtdrec / NULLIF(e075der.vlrcn2, 0)) * COALESCE(e084cmd.usu_qtdder, 360)) 
-					/ NULLIF(COALESCE(e059emb.usu_qtdcon, 360), 0)) * -1
-
-				WHEN E440IPC.uninfc = E075PRO.unimed THEN
-					(E440IPC.usu_qtdrec * NULLIF(COALESCE(e084cmd.usu_qtdder, COALESCE(e075der.vlrcn2, 360)), 0) 
-					/ NULLIF(COALESCE(e059emb.usu_qtdcon, 1), 0)) * -1
-			END AS CX_360,	
+          CASE 
+				WHEN (E440IPC.usu_uninfc = E075PRO.unime3) THEN
+          		(((E440IPC.usu_qtdrec) /(e075der.vlrcn3)*COALESCE( e084cmd.usu_qtdder,  360 ))/COALESCE((e059emb.usu_qtdcon), 360)) *-1          
+          		WHEN (E440IPC.usu_uninfc = E075PRO.unime2) THEN
+          		(((E440IPC.usu_qtdrec) /(e075der.vlrcn2)*COALESCE( e084cmd.usu_qtdder,  360 ))/COALESCE((e059emb.usu_qtdcon), 360)) *-1
+          		WHEN (E440IPC.usu_uninfc = E075PRO.unimed)THEN
+          		(e440ipc.usu_qtdrec*COALESCE((e084cmd.usu_qtdder), COALESCE((e075der.vlrcn2),  360))/COALESCE((e059emb.usu_qtdcon), 1))*-1          		
+          END
+           'CX_360',	
 		
+CONVERT( DECIMAL(10,2),
 		CASE 
-			WHEN e076mar.codmar = 'ADUBO' THEN 0
+			WHEN e076mar.codmar IN( 'ADUBO','OUTROS') THEN 0
 		ELSE
 			CASE
 				WHEN e059emb.codemb = 34 THEN
@@ -478,7 +479,7 @@ UNION ALL
 							-1 * ((E440IPC.usu_qtdrec * COALESCE(e084cmd.usu_qtdder,1)) / NULLIF(COALESCE(e059emb.usu_qtdcon,1),0))
 					END
 			END
-		END  AS 'CAIXA360',
+		END )  AS 'CAIXA360',
 
           CONVERT(DECIMAL(10,2), e440ipc.preuni*-1) 'Preco_Faturado',
           CONVERT(DECIMAL(10,2), e440ipc.vlrliq*-1) 'Valor_Bruto',

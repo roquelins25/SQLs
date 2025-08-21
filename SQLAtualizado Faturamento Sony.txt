@@ -183,6 +183,7 @@ END as money )as 'Valor_Liquido',
 	   end Nome_Marca,
 	(select usu_Destip From usu_ttiptns where e001tns.usu_codtip = usu_ttiptns.usu_codtip) as tipo,
 	e085hcl.usu_km km,
+	
 CONVERT(DECIMAL(10,2),
 			CASE 
 				WHEN e076mar.codmar IN( 'ADUBO','OUTROS') THEN 0
@@ -593,6 +594,7 @@ SELECT
 	   end Nome_Marca,
 	(select usu_Destip From usu_ttiptns where e001tns.usu_codtip = usu_ttiptns.usu_codtip) as tipo,
 	e095hfo.usu_km km,
+	
 CONVERT( DECIMAL(10,2),
 		CASE 
 			WHEN e076mar.codmar IN( 'ADUBO','OUTROS') THEN 0
