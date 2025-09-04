@@ -835,6 +835,7 @@ LEFT JOIN usu_tfincfgdsc
 						  and e614apr.sitapr <> 'REP') or
 						   e440nfc.numapr = 0
 						  )
+		and ( (e440nfc.datger < '2025/08/01') OR (e440nfc.datger >= '2025/08/01' AND e001tns.comnat <> '2949') )
 
 UNION ALL 
 SELECT  
@@ -1029,3 +1030,4 @@ LEFT JOIN e001tns
       AND e140nfv.sitnfv=2	 
 	  and e140nfv.datemi >= '01/01/2019'
 	  and e140nfv.codemp not in (3,14,8)
+	  
