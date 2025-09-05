@@ -2,8 +2,7 @@ SELECT
 	E070EMP.CODEMP  Empresa, 
     E070EMP.NOMEMP Razao_Empresa, 
     CASE 	WHEN E070EMP.CODEMP = 18 AND E070FIL.codfil = 2 	THEN 'Granja BL GO'
-			WHEN E070EMP.CODEMP = 18 AND E070FIL.codfil = 9 	THEN 'Granja BL TRANSP'
-	        WHEN E070EMP.CODEMP = 18 AND E070FIL.codfil not in(2,9)	THEN 'Granja BL ES' 
+	        WHEN E070EMP.CODEMP = 18 AND E070FIL.codfil not in(2)	THEN 'Granja BL ES' 
 	        WHEN E070EMP.CODEMP IN (20,21) 					    THEN 'Granja BL ES'
 			WHEN E070EMP.CODEMP IN (19) 					    THEN 'Granja BL TRANSP'
 	        WHEN E070EMP.CODEMP = 10 							THEN 'Iana MG'
@@ -135,4 +134,4 @@ LEFT JOIN E070FIL ON e070fil.codemp = e070emp.codemp
 LEFT JOIN usu_tgertipfil ON 
 	usu_tgertipfil.usu_codtip = e070fil.usu_codtip
 WHERE 
-    e070emp.codemp = 100 
+    e070emp.codemp = 100
