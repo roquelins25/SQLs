@@ -1,0 +1,138 @@
+SELECT 	
+	E070EMP.CODEMP  Empresa, 
+    E070EMP.NOMEMP Razao_Empresa, 
+    CASE 	WHEN E070EMP.CODEMP = 18 AND E070FIL.codfil = 2 	THEN 'Granja BL GO'
+			WHEN E070EMP.CODEMP = 18 AND E070FIL.codfil = 9 	THEN 'Granja BL TRANSP'
+	        WHEN E070EMP.CODEMP = 18 AND E070FIL.codfil not in(2,9)	THEN 'Granja BL ES' 
+	        WHEN E070EMP.CODEMP IN (20,21) 					    THEN 'Granja BL ES'
+			WHEN E070EMP.CODEMP IN (19) 					    THEN 'Granja BL TRANSP'
+	        WHEN E070EMP.CODEMP = 10 							THEN 'Iana MG'
+	        WHEN E070EMP.CODEMP = 1 AND E070FIL.codfil = 12     THEN 'Maciambu'
+			WHEN E070EMP.CODEMP = 4 							THEN 'Iana TO'
+        ELSE E070EMP.sigemp  END AS  Fantasia_Empresa,
+
+    E070FIL.CODFIL Filial,
+	E070FIL.NOMFIL Nome_Filial,
+	E070FIL.SIGFIL Sigla_FIlial,
+    CONCAT(E070EMP.CODEMP,'_',E070FIL.CODFIL) AS ID_Emp_Fil,
+	CONCAT_WS(' - ',CONCAT(E070EMP.CODEMP,'_',E070FIL.CODFIL) , E070FIL.SIGFIL) CodNomeEmp,
+	E070FIL.cepfil,
+	E070FIL.endfil,
+	E070FIL.baifil,
+	E070FIL.cidfil,
+	E070FIL.sigufs,
+	E070FIL.nenfil,
+	E070FIL.usu_longitude,
+	E070FIL.usu_latitude,
+	e070fil.usu_codtip Cod_Classific,
+	CASE 
+			WHEN usu_tgertipfil.usu_destip IS NULL THEN
+					'Outro'
+			ELSE
+				usu_tgertipfil.usu_destip
+	end
+	Classific,
+CASE 
+           WHEN E070EMP.codemp = 1 THEN 'http://avicola.jvsistemas.inf.br/Manuais/GF/Granja_Faria/Logo/LOGO_GRANJA_FARIA_HORIZONTAL.png'
+           WHEN E070EMP.codemp = 2 THEN 'http://avicola.jvsistemas.inf.br/Manuais/GF/Ares_do_Campo/Logo/LOGO_ARES_DO_CAMPO.png'
+           WHEN E070EMP.codemp = 3 THEN 'http://avicola.jvsistemas.inf.br/Manuais/GF/Iana/Logo/LOGO_IANA.png'
+           WHEN E070EMP.codemp = 5 THEN 'http://avicola.jvsistemas.inf.br/Manuais/GF/Marutani/LOGO/LOGO%20MARUTANI.png'
+           WHEN E070EMP.codemp = 10 THEN 'http://avicola.jvsistemas.inf.br/Manuais/GF/Iana/Logo/LOGO_IANA.png'
+           WHEN E070EMP.codemp = 12 THEN 'http://avicola.jvsistemas.inf.br/Manuais/GF/Avimor/Logo/Logo_Avimor.png'
+           WHEN E070EMP.codemp = 14 THEN 'http://avicola.jvsistemas.inf.br/Manuais/GF/Iana/Logo/LOGO_IANA.png'
+           WHEN E070EMP.codemp = 15 THEN 'http://avicola.jvsistemas.inf.br/Manuais/GF/Alexaves/Logo/Logo_Alexaves.png'
+           WHEN E070EMP.codemp = 17 THEN 'http://avicola.jvsistemas.inf.br/Manuais/GF/Fertifar/Logo/Logo_Fertifar.png'
+           WHEN E070EMP.codemp = 18 THEN 'http://avicola.jvsistemas.inf.br/Manuais/GF/ASA/Logo/LOGO_ASA.png'
+           WHEN E070EMP.codemp = 19 THEN 'http://avicola.jvsistemas.inf.br/Manuais/GF/STRAGLIOTTO/LOGO/LOGO%20STRAGLIOTTO%20nova.png'
+           WHEN E070EMP.codemp = 20 THEN 'http://avicola.jvsistemas.inf.br/Manuais/GF/Iana/Logo/LOGO_IANA.png'
+           WHEN E070EMP.codemp = 21 THEN 'http://avicola.jvsistemas.inf.br/Manuais/GF/Katayama/Logo/Logo_Katayama.png'
+           WHEN E070EMP.codemp = 25 THEN 'http://avicola.jvsistemas.inf.br/Manuais/GF/Iana/Logo/LOGO_IANA.png'
+           WHEN E070EMP.codemp = 26 THEN 'http://avicola.jvsistemas.inf.br/Manuais/GF/Iana/Logo/LOGO_IANA.png'
+           WHEN E070EMP.codemp = 27 THEN 'http://avicola.jvsistemas.inf.br/Manuais/GF/Granja_Faria/Logo/LOGO_GRANJA_FARIA_HORIZONTAL.png'
+           WHEN E070EMP.codemp = 29 THEN 'http://avicola.jvsistemas.inf.br/Manuais/GF/Vitagema/Logo/logo_Vitagema.png'
+       END AS lnklog		
+ 
+FROM E070EMP
+LEFT JOIN E070FIL ON e070fil.codemp = e070emp.codemp
+LEFT JOIN usu_tgertipfil ON 
+	usu_tgertipfil.usu_codtip = e070fil.usu_codtip
+WHERE 
+    	E070FIL.CODFIL < 300 
+    and e070emp.codemp not in (3,16,100)
+ 
+UNION all
+  SELECT 	
+	CASE 	WHEN E070EMP.CODEMP = 100 AND E070FIL.CODFIL = 17 		THEN 12
+			WHEN E070EMP.CODEMP = 100 AND E070FIL.CODFIL = 30 		THEN 6
+			WHEN E070EMP.CODEMP = 100 AND E070FIL.CODFIL in (18,19) THEN 15
+			WHEN E070EMP.CODEMP = 100 AND E070FIL.CODFIL in (20,21,22,23) THEN 9
+			--WHEN E070EMP.codemp = 100 AND E070FIL.CODFIL = 9 THEN 5
+			WHEN E070EMP.CODEMP = 100 AND E070FIL.CODFIL = 14 THEN 4
+			WHEN E070EMP.CODEMP = 100 AND E070FIL.CODFIL in (31,42,41,43,32) THEN 7
+			WHEN E070EMP.CODEMP = 100 AND E070FIL.CODFIL in (1,2,3,4,5,6,7,8,9,10,11,12,13,15,16,24) 
+			THEN 1 else E070EMP.CODEMP END AS Empresa,  						
+	CASE 	WHEN E070EMP.CODEMP = 100 AND E070FIL.CODFIL = 17		THEN 'Avimor' 
+    		WHEN E070EMP.CODEMP = 100 AND E070FIL.CODFIL = 30		THEN 'Stragliott' 
+    		WHEN E070EMP.CODEMP = 100 AND E070FIL.CODFIL = 9		THEN 'Marutani'
+			WHEN E070EMP.CODEMP = 100 AND E070FIL.CODFIL in (18,19) THEN 'Alexaves'
+			WHEN E070EMP.CODEMP = 100 AND E070FIL.CODFIL in (20,21,22,23) THEN 'Iana MG'
+			WHEN E070EMP.CODEMP = 100 AND E070FIL.CODFIL = 14 THEN 'Iana TO'
+			WHEN E070EMP.CODEMP = 100 AND E070FIL.CODFIL in (31,42,41,43,32) THEN 'ASA'
+    		WHEN E070EMP.CODEMP = 100 AND E070FIL.CODFIL in (1,2,3,4,5,6,7,8,10,11,12,13,15,16,24) 
+    		THEN 'Gr. Faria' else E070EMP.NOMEMP END AS Razao_Empresa, 
+    CASE    WHEN E070EMP.CODEMP = 100 AND E070FIL.CODFIL = 17 	THEN 'Avimor'
+	        WHEN E070EMP.CODEMP = 100 AND E070FIL.CODFIL = 30   THEN 'Stragliott'
+	        WHEN E070EMP.CODEMP = 100 AND E070FIL.CODFIL = 12   THEN 'Maciambu' 
+	        WHEN E070EMP.CODEMP = 100 AND E070FIL.CODFIL = 9    THEN 'Marutani'
+			WHEN E070EMP.CODEMP = 100 AND E070FIL.CODFIL in (18,19) THEN 'Alexaves'
+			WHEN E070EMP.CODEMP = 100 AND E070FIL.CODFIL in (20,21,22,23) THEN 'Iana MG'
+			WHEN E070EMP.CODEMP = 100 AND E070FIL.CODFIL = 14 THEN 'Iana TO'
+			WHEN E070EMP.CODEMP = 100 AND E070FIL.CODFIL in (31,42,41,43,32) THEN 'ASA'
+        ELSE E070EMP.sigemp  END AS  Fantasia_Empresa,
+    E070FIL.CODFIL Filial,
+	E070FIL.NOMFIL Nome_Filial,
+	E070FIL.SIGFIL Sigla_FIlial,
+    CONCAT(E070EMP.CODEMP,'_',E070FIL.CODFIL) AS ID_Emp_Fil,
+	CONCAT_WS(' - ',CONCAT(E070EMP.CODEMP,'_',E070FIL.CODFIL) , E070FIL.SIGFIL) CodNomeEmp,
+	E070FIL.cepfil,
+	E070FIL.endfil,
+	E070FIL.baifil,
+	E070FIL.cidfil,
+	E070FIL.sigufs,
+	E070FIL.nenfil,
+	E070FIL.usu_longitude,
+	E070FIL.usu_latitude,
+	e070fil.usu_codtip Cod_Classific,
+	CASE 
+			WHEN usu_tgertipfil.usu_destip IS NULL THEN
+					'Outro'
+			ELSE
+				usu_tgertipfil.usu_destip
+	end
+	Classific,
+CASE 
+           WHEN E070EMP.codemp = 1 THEN 'http://avicola.jvsistemas.inf.br/Manuais/GF/Granja_Faria/Logo/LOGO_GRANJA_FARIA_HORIZONTAL.png'
+           WHEN E070EMP.codemp = 2 THEN 'http://avicola.jvsistemas.inf.br/Manuais/GF/Ares_do_Campo/Logo/LOGO_ARES_DO_CAMPO.png'
+           WHEN E070EMP.codemp = 3 THEN 'http://avicola.jvsistemas.inf.br/Manuais/GF/Iana/Logo/LOGO_IANA.png'
+           WHEN E070EMP.codemp = 5 THEN 'http://avicola.jvsistemas.inf.br/Manuais/GF/Marutani/LOGO/LOGO%20MARUTANI.png'
+           WHEN E070EMP.codemp = 10 THEN 'http://avicola.jvsistemas.inf.br/Manuais/GF/Iana/Logo/LOGO_IANA.png'
+           WHEN E070EMP.codemp = 12 THEN 'http://avicola.jvsistemas.inf.br/Manuais/GF/Avimor/Logo/Logo_Avimor.png'
+           WHEN E070EMP.codemp = 14 THEN 'http://avicola.jvsistemas.inf.br/Manuais/GF/Iana/Logo/LOGO_IANA.png'
+           WHEN E070EMP.codemp = 15 THEN 'http://avicola.jvsistemas.inf.br/Manuais/GF/Alexaves/Logo/Logo_Alexaves.png'
+           WHEN E070EMP.codemp = 17 THEN 'http://avicola.jvsistemas.inf.br/Manuais/GF/Fertifar/Logo/Logo_Fertifar.png'
+           WHEN E070EMP.codemp = 18 THEN 'http://avicola.jvsistemas.inf.br/Manuais/GF/ASA/Logo/LOGO_ASA.png'
+           WHEN E070EMP.codemp = 19 THEN 'http://avicola.jvsistemas.inf.br/Manuais/GF/STRAGLIOTTO/LOGO/LOGO%20STRAGLIOTTO%20nova.png'
+           WHEN E070EMP.codemp = 20 THEN 'http://avicola.jvsistemas.inf.br/Manuais/GF/Iana/Logo/LOGO_IANA.png'
+           WHEN E070EMP.codemp = 21 THEN 'http://avicola.jvsistemas.inf.br/Manuais/GF/Katayama/Logo/Logo_Katayama.png'
+           WHEN E070EMP.codemp = 25 THEN 'http://avicola.jvsistemas.inf.br/Manuais/GF/Iana/Logo/LOGO_IANA.png'
+           WHEN E070EMP.codemp = 26 THEN 'http://avicola.jvsistemas.inf.br/Manuais/GF/Iana/Logo/LOGO_IANA.png'
+           WHEN E070EMP.codemp = 27 THEN 'http://avicola.jvsistemas.inf.br/Manuais/GF/Granja_Faria/Logo/LOGO_GRANJA_FARIA_HORIZONTAL.png'
+           WHEN E070EMP.codemp = 29 THEN 'http://avicola.jvsistemas.inf.br/Manuais/GF/Vitagema/Logo/logo_Vitagema.png'
+       END AS lnklog		
+ 
+FROM E070EMP
+LEFT JOIN E070FIL ON e070fil.codemp = e070emp.codemp
+LEFT JOIN usu_tgertipfil ON 
+	usu_tgertipfil.usu_codtip = e070fil.usu_codtip
+WHERE 
+    e070emp.codemp = 100 

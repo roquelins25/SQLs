@@ -711,8 +711,8 @@ LEFT JOIN usu_tfincfgdsc
 UNION ALL
 SELECT  
           'NF Serviço' AS 'Tipo_NF',
-		  CONCAT(e140isv.codemp,'_',e140isv.codfil) as 'ID_BI_EmpFil',
 		  (select usu_Destip From usu_ttiptns where e001tns.usu_codtip = usu_ttiptns.usu_codtip) as tipo,
+		  CONCAT(e140isv.codemp,'_',e140isv.codfil) as 'ID_BI_EmpFil',
           e140isv.codemp 'Codigo_Empresa',
           e140isv.codfil 'Codigo_Filial',
           e140nfv.datemi 'Emissao',
