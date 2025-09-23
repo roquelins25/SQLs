@@ -171,6 +171,8 @@ CONVERT(DECIMAL(10,2),
 							 end
 					 END
 						  END, 0)AS money) AS 'Valor_Desconto',
+						  
+						  
 -- VERIFICA SE É BONIFICAÇÃO
 CAST( CASE 
 		WHEN ((e001tns.usu_codtip <> 2) AND (e001tns.usu_codtip <> 5)) THEN
@@ -395,7 +397,7 @@ UNION ALL
           e440ipc.qtdest*-1 'Qtd_Estoque',
           e440ipc.unimed 'UN_Prod',
           e440ipc.preuni*-1 'Preco_UN',
-          e440ipc.uninfc 'UN_Faturada',
+          e440ipc.usu_uninfc 'UN_Faturada',
 		  e075pro.unime3,
 		  e075pro.unime2,
 		  e075der.vlrcn3,
@@ -411,8 +413,10 @@ UNION ALL
           		(((E440IPC.usu_qtdrec) /(e075der.vlrcn3)*COALESCE( e084cmd.usu_qtdder,  360 ))/COALESCE((e059emb.usu_qtdcon), 360)) *-1          
           		WHEN (E440IPC.usu_uninfc = E075PRO.unime2) THEN
           		(((E440IPC.usu_qtdrec) /(e075der.vlrcn2)*COALESCE( e084cmd.usu_qtdder,  360 ))/COALESCE((e059emb.usu_qtdcon), 360)) *-1
-          		WHEN (E440IPC.usu_uninfc = E075PRO.unimed)THEN
-          		(e440ipc.usu_qtdrec*COALESCE((e084cmd.usu_qtdder), COALESCE((e075der.vlrcn2),  360))/COALESCE((e059emb.usu_qtdcon), 1))*-1          		
+          		
+				WHEN (E440IPC.usu_uninfc = E075PRO.unimed)THEN
+          		(e440ipc.usu_qtdrec*COALESCE((e084cmd.usu_qtdder), COALESCE((e075der.vlrcn2),  360))/COALESCE((e059emb.usu_qtdcon), 1))*-1   
+       		
           END
            'CX_360',	
 		
@@ -521,20 +525,23 @@ CONVERT( DECIMAL(10,2),
 	
 	) + (
 	-- DESCONTOS
-	  CASE  
-		WHEN (( e001tns.usu_codtip = 3) or ( e001tns.usu_codtip = 1))  THEN
-																		CASE 
-																			WHEN ( usu_tfindsc.usu_frmdsc = 1 or usu_tfindsc.usu_frmdsc = 3) THEN coalesce(e440ipc.vlrliq * e140ipv.usu_perdscfin/100,0)		
-																		ELSE coalesce(e440ipc.vlrliq * e140ipv.usu_perdscfin/100,0)
-																		END 
-		ELSE 0 
-	  END	
+		  case  
+		  when (( e001tns.usu_codtip = 3) or ( e001tns.usu_codtip = 1))  then
+				case
+						when ( usu_tfindsc.usu_frmdsc = 1 or usu_tfindsc.usu_frmdsc = 3) then
+								coalesce(e440ipc.vlrliq * usu_tfincfgdsc.usu_perdsc/100,0)	 * -1			
+						else
+								coalesce(e440ipc.vlrliq * usu_tfindsc.usu_perdsc/100,0)	 * -1
+				end else
+				 0 
+		  end	
 	) + (
 	-- SELL-OUT
 	 0 )
 ) )*-1 AS 'Valor_Liquido',
 
 	  e440ipc.vlrliq*-1  as 'Valor_Bruto_Total',
+	  
 		 0 'Desc_SellOut',
 ( 
 -- IMPOSTOS
